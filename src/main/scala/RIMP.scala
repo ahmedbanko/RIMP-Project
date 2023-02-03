@@ -396,7 +396,7 @@ class RIMP {
   abstract class Stmt
   abstract class AExp
   abstract class BExp
-  abstract class ArrExp
+//  abstract class ArrExp
 
 
   type Block = List[Stmt]
@@ -406,13 +406,12 @@ class RIMP {
   case class If(a: BExp, bl1: Block, bl2: Block) extends Stmt
   case class While(b: BExp, bl: Block) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
+  case class ArrVar(values: List[Int]) extends Stmt
 
 
   case class Var(s: String) extends AExp
   case class Num(i: Int) extends AExp
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
-
-  case class ArrVar(name: String, values: List[Int]) extends ArrExp
 
 
   case object True extends BExp
@@ -434,16 +433,14 @@ class RIMP {
     (p"(" ~ AExp ~ p")").map { case _ ~ y ~ _ => y } ||
       (p"!" ~ IdParser).map{ case _ ~ x  => Var(x)} || NumParser.map(Num)
 
-  // array expression
-  lazy val ArrExp: Parser[Tokens, ArrExp] =
-    (IdParser ~ ArrBlock).map{ case id ~ values => ArrVar(id, values)}
-
+ // TODO: fix when array is empty AND add array assignment
   lazy val ArrBlock: Parser[Tokens, ArrBlock] =
     (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y }
 
+
   lazy val ArrVals: Parser[Tokens, ArrBlock] =
     (NumParser ~ CommaParser ~ ArrVals).map[ArrBlock] { case x ~ _ ~ z => x :: z } ||
-      NumParser.map(Num)
+      NumParser.map(x => List(x))
 
 
   // boolean expressions with some simple nesting
@@ -467,7 +464,8 @@ class RIMP {
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w) } ||
-      (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
+      (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x } ||
+      ArrBlock.map(ArrVar)
 
 
   // statements

@@ -408,7 +408,7 @@ class RIMP {
   case class While(b: BExp, bl: Block) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
 
-  case class AssignArr(id: String, value: List[Int]) extends Stmt
+  case class AssignArr(id: String, values: List[Int]) extends Stmt
 
 
   case class Var(s: String) extends AExp
@@ -546,17 +546,22 @@ class RIMP {
   //  import parser._
 
   // an interpreter for the WHILE language
-  type Env = Map[String, Int]
+  type Env = Map[String, Any]
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
-    case Var(s) => env(s)
+    case Var(s) => env(s).asInstanceOf[Int]
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
     case Aop("*", a1, a2) => eval_aexp(a1, env) * eval_aexp(a2, env)
     case Aop("/", a1, a2) => eval_aexp(a1, env) / eval_aexp(a2, env)
     case Aop("%", a1, a2) => eval_aexp(a1, env) % eval_aexp(a2, env)
   }
+
+//  def eval_array(values: List[Int], env: Env): List[Int] = values match {
+//    case Nil => List()
+//    case hd::tail =>
+//  }
 
 
   def eval_bexp(b: BExp, env: Env): Boolean = b match {
@@ -575,7 +580,7 @@ class RIMP {
     s match {
       case Skip => env
       case Assign(x, a) => env + (x -> eval_aexp(a, env))
-      //    case IArray(a) => env + Array[Int](eval_aexp(a, env))
+      case AssignArr(id, values) => env + (id -> values)
       case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
       case While(b, bl) =>
         if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))

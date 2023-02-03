@@ -401,14 +401,14 @@ class RIMP {
 
 
   type Block = List[Stmt]
-  type ArrBlock = List[Int]
+  type ArrBlock = List[AExp]
 
   case object Skip extends Stmt
   case class If(a: BExp, bl1: Block, bl2: Block) extends Stmt
   case class While(b: BExp, bl: Block) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
 
-  case class AssignArr(id: String, values: List[Int]) extends Stmt
+  case class AssignArr(id: String, values: List[AExp]) extends Stmt
 
 
   case class Var(s: String) extends AExp
@@ -440,10 +440,9 @@ class RIMP {
       (p"[" ~ p"]").map { case _ ~ _ => List() }
 
 
-
   lazy val ArrVals: Parser[Tokens, ArrBlock] =
-    (NumParser ~ CommaParser ~ ArrVals).map[ArrBlock] { case x ~ _ ~ z => x :: z } ||
-      NumParser.map(x => List(x))
+    (AExp ~ CommaParser ~ ArrVals).map[ArrBlock] { case x ~ _ ~ z => x :: z } ||
+      AExp.map(x => List(x))
 
 
   // boolean expressions with some simple nesting
@@ -576,11 +575,14 @@ class RIMP {
     case Not(b) => !eval_bexp(b, env)
   }
 
+  def eval_arrVals(values: List[AExp], env: Env): List[Int] =
+    values.map(x => eval_aexp(x, env))
+
   def eval_stmt(s: Stmt, env: Env): Env =
     s match {
       case Skip => env
       case Assign(x, a) => env + (x -> eval_aexp(a, env))
-      case AssignArr(id, values) => env + (id -> values)
+      case AssignArr(id, values) => env + (id -> eval_arrVals(values, env))
       case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
       case While(b, bl) =>
         if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))

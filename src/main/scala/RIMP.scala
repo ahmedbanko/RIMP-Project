@@ -396,7 +396,8 @@ class RIMP {
   abstract class Stmt
   abstract class AExp
   abstract class BExp
-//  abstract class ArrExp
+
+  abstract class ArrExp
 
 
   type Block = List[Stmt]
@@ -406,7 +407,8 @@ class RIMP {
   case class If(a: BExp, bl1: Block, bl2: Block) extends Stmt
   case class While(b: BExp, bl: Block) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
-  case class ArrVar(values: List[Int]) extends Stmt
+
+  case class AssignArr(id: String, value: List[Int]) extends Stmt
 
 
   case class Var(s: String) extends AExp
@@ -433,9 +435,10 @@ class RIMP {
     (p"(" ~ AExp ~ p")").map { case _ ~ y ~ _ => y } ||
       (p"!" ~ IdParser).map{ case _ ~ x  => Var(x)} || NumParser.map(Num)
 
- // TODO: fix when array is empty AND add array assignment
   lazy val ArrBlock: Parser[Tokens, ArrBlock] =
-    (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y }
+    (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y } ||
+      (p"[" ~ p"]").map { case _ ~ _ => List() }
+
 
 
   lazy val ArrVals: Parser[Tokens, ArrBlock] =
@@ -461,11 +464,14 @@ class RIMP {
   lazy val Stmt: Parser[Tokens, Stmt] =
     (p"skip").map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
+      (IdParser ~ p":=" ~ ArrBlock).map {case id ~ _ ~ values => AssignArr(id, values)}
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w) } ||
-      (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x } ||
-      ArrBlock.map(ArrVar)
+      (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
+
+//  ArrBlock.map(ArrVal)
+
 
 
   // statements

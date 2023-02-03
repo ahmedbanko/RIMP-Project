@@ -409,7 +409,7 @@ class RIMP {
   case class Assign(s: String, a: AExp) extends Stmt
 
   case class AssignArr(id: String, values: List[AExp]) extends Stmt
-
+  case class ArrayVar(id: String, index: AExp) extends AExp
 
   case class Var(s: String) extends AExp
   case class Num(i: Int) extends AExp
@@ -433,7 +433,9 @@ class RIMP {
       (Fa ~ p"%" ~ Te).map[AExp] { case x ~ _ ~ z => Aop("%", x, z) } || Fa
   lazy val Fa: Parser[Tokens, AExp] =
     (p"(" ~ AExp ~ p")").map { case _ ~ y ~ _ => y } ||
-      (p"!" ~ IdParser).map{ case _ ~ x  => Var(x)} || NumParser.map(Num)
+      (IdParser ~ p"[" ~ AExp ~ p"]").map {case id ~ _ ~ index ~ _ =>  ArrayVar(id, index)} ||
+      (p"!" ~ IdParser).map{ case _ ~ x  => Var(x)} ||
+      NumParser.map(Num)
 
   lazy val ArrBlock: Parser[Tokens, ArrBlock] =
     (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y } ||
@@ -550,17 +552,18 @@ class RIMP {
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
     case Var(s) => env(s).asInstanceOf[Int]
+    case ArrayVar(id, index) => {
+      val valsList = env(id).toString
+      val intList = valsList.stripPrefix("List(").stripSuffix(")").split(", ").map(_.toInt).toList
+      val indexVal = eval_aexp(index, env)
+      intList(indexVal)
+    }
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
     case Aop("*", a1, a2) => eval_aexp(a1, env) * eval_aexp(a2, env)
     case Aop("/", a1, a2) => eval_aexp(a1, env) / eval_aexp(a2, env)
     case Aop("%", a1, a2) => eval_aexp(a1, env) % eval_aexp(a2, env)
   }
-
-//  def eval_array(values: List[Int], env: Env): List[Int] = values match {
-//    case Nil => List()
-//    case hd::tail =>
-//  }
 
 
   def eval_bexp(b: BExp, env: Env): Boolean = b match {

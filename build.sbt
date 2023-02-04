@@ -6,3 +6,6 @@ lazy val root = (project in file("."))
   .settings(
     name := "RIMP-Project"
   )
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.15" % Test
+libraryDependencies += "org.scalatestplus" %% "scalacheck-1-17" % "3.2.15.0" % "test"

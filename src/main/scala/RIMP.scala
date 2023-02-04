@@ -1,6 +1,8 @@
+
+
 class RIMP {
 
-//  --------- Lexer -------------
+  //  --------- Lexer -------------
 
   import scala.language.implicitConversions
   abstract class Rexp
@@ -257,6 +259,7 @@ class RIMP {
   val RBRACK: Rexp = ")"
   val LBRACK: Rexp = "("
   val SEMI: Rexp = ";"
+  val COMMA: Rexp = ","
   val ID: Rexp = LETTER ~ ("_" | LETTER | DIGIT).%
   val NUM: Rexp = "0" | (RANGE("123456789".toSet) ~ STAR(DIGIT))
 
@@ -265,6 +268,7 @@ class RIMP {
     ("operation" $ OP) |
     ("number" $ NUM) |
     ("semicolon" $ SEMI) |
+    ("comma" $ COMMA) |
     ("parenthesis" $ (LPAREN | RPAREN)) |
     ("brackets" $ (RBRACK | LBRACK)) |
     ("sqr_brackets" $ (RSQRB | LSQRB)) |
@@ -279,8 +283,8 @@ class RIMP {
   //  --------- Parser -------------
 
 
-//  import $file.token
-//  import token._
+  //  import $file.token
+  //  import token._
 
   case class ~[+A, +B](x: A, y: B)
 
@@ -321,7 +325,6 @@ class RIMP {
 
   case class TokenParser(sin: String) extends Parser[Tokens, Token] {
     def parse(in: Tokens): Set[(Token, Tokens)] = in match {
-      case T_SEMI :: tail if (sin == ";") => Set((T_SEMI, tail))
       case T_LBRACK :: tail if (sin == "(") => Set((T_LBRACK, tail))
       case T_RBRACK :: tail if (sin == ")") => Set((T_RBRACK, tail))
       case T_LSQRB :: tail if (sin == "[") => Set((T_LSQRB, tail))
@@ -346,6 +349,21 @@ class RIMP {
   }
 
 
+  case object CommaParser extends Parser[Tokens, String] {
+    def parse(in: Tokens) = in match {
+      case T_COMMA :: tail => Set((",", tail))
+      case _ => Set()
+    }
+  }
+
+  case object SEMIParser extends Parser[Tokens, String] {
+    def parse(in: Tokens) = in match {
+      case T_SEMI :: tail => Set((";", tail))
+      case _ => Set()
+    }
+  }
+
+
   case object IdParser extends Parser[Tokens, String] {
     def parse(in: Tokens) = in match {
       case T_ID(s) :: tail => Set((s, tail))
@@ -360,6 +378,7 @@ class RIMP {
       case _ => Set()
     }
   }
+
 
 
   implicit def parser_interpolation(sc: StringContext) = new {
@@ -378,18 +397,25 @@ class RIMP {
   abstract class AExp
   abstract class BExp
 
+
+
   type Block = List[Stmt]
+  type ArrBlock = List[AExp]
 
   case object Skip extends Stmt
   case class If(a: BExp, bl1: Block, bl2: Block) extends Stmt
   case class While(b: BExp, bl: Block) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
 
+  case class AssignArr(id: String, values: List[AExp]) extends Stmt
+  case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
+  case class ArrayVar(id: String, index: AExp) extends AExp
 
   case class Var(s: String) extends AExp
-  case class IArray(a: AExp) extends AExp
   case class Num(i: Int) extends AExp
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
+
+
   case object True extends BExp
   case object False extends BExp
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
@@ -407,8 +433,19 @@ class RIMP {
       (Fa ~ p"%" ~ Te).map[AExp] { case x ~ _ ~ z => Aop("%", x, z) } || Fa
   lazy val Fa: Parser[Tokens, AExp] =
     (p"(" ~ AExp ~ p")").map { case _ ~ y ~ _ => y } ||
-      (p"[" ~ AExp ~ p"]").map{ case _ ~ arrSize ~ _  => IArray(arrSize)} ||
-      (p"!" ~ IdParser).map{ case _ ~ x  => Var(x)} || NumParser.map(Num)
+      (IdParser ~ p"[" ~ AExp ~ p"]").map {case id ~ _ ~ index ~ _ =>  ArrayVar(id, index)} ||
+      (p"!" ~ IdParser).map{ case _ ~ x  => Var(x)} ||
+      NumParser.map(Num)
+
+  lazy val ArrBlock: Parser[Tokens, ArrBlock] =
+    (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y } ||
+      (p"[" ~ p"]").map { case _ ~ _ => List() }
+
+
+  lazy val ArrVals: Parser[Tokens, ArrBlock] =
+    (AExp ~ CommaParser ~ ArrVals).map[ArrBlock] { case x ~ _ ~ z => x :: z } ||
+      AExp.map(x => List(x))
+
 
   // boolean expressions with some simple nesting
   lazy val BExp: Parser[Tokens, BExp] =
@@ -418,32 +455,39 @@ class RIMP {
       (AExp ~ p">" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">", x, z) } ||
       (AExp ~ p">=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">=", x, z) } ||
       (AExp ~ p"<=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop("<=", x, z) } ||
-      (p"true".map[BExp] { _ => True }) ||
-      (p"false".map[BExp] { _ => False }) ||
+      (p"true").map[BExp] { _ => True } ||
+      (p"false").map[BExp] { _ => False } ||
       (p"~" ~ BExp).map[BExp] {case _ ~ x => Not(x)} ||
       (p"(" ~ BExp ~ p")").map[BExp] { case _ ~ x ~ _ => x }
 
 
   // a single statement
   lazy val Stmt: Parser[Tokens, Stmt] =
-    ((p"skip".map[Stmt] { _ => Skip }) ||
+    (p"skip").map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
+      (IdParser ~ p":=" ~ ArrBlock).map {case id ~ _ ~ values => AssignArr(id, values)} ||
+      (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map{
+        case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)} ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w) } ||
-      (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x })
+      (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
+
+//  ArrBlock.map(ArrVal)
+
 
 
   // statements
   lazy val Stmts: Parser[Tokens, Block] =
-    (Stmt ~ p";" ~ Stmts).map[Block] { case x ~ _ ~ z => x :: z } ||
-      (Stmt.map[Block] { s => List(s) })
+    (Stmt ~ SEMIParser ~ Stmts).map[Block] { case x ~ _ ~ z => x :: z } ||
+      Stmt.map{ s => List(s) }
+
 
   // blocks (enclosed in curly braces)
   lazy val Block: Parser[Tokens, Block] =
-    ((p"{" ~ Stmts ~ p"}").map { case _ ~ y ~ _ => y } ||
+    (p"{" ~ Stmts ~ p"}").map { case _ ~ y ~ _ => y } ||
       (p"(" ~ Stmts ~ p")").map { case _ ~ y ~ _ => y } ||
-      (Stmt.map(s => List(s))))
+      Stmt.map(s => List(s))
 
   // helper function to parse programs (filters whitespases and comments)
   def parse(program: String) = {
@@ -456,11 +500,12 @@ class RIMP {
 
   // ----------- Tokenizer ------------
 
-//  import $file.lexer
-//  import lexer._
+  //  import $file.lexer
+  //  import lexer._
 
   abstract class Token
   case object T_SEMI extends Token
+  case object T_COMMA extends Token
   case object T_LPAREN extends Token
   case object T_RSQRB extends Token
   case object T_LSQRB extends Token
@@ -476,6 +521,7 @@ class RIMP {
 
   val token: PartialFunction[(String, String), Token] = {
     case ("semicolon", _) => T_SEMI
+    case ("comma", _) => T_COMMA
     case ("parenthesis", "{") => T_LPAREN
     case ("parenthesis", "}") => T_RPAREN
     case ("brackets", "(") => T_LBRACK
@@ -486,7 +532,7 @@ class RIMP {
     case ("operation", s) => T_OP(s)
     case ("number", s) => T_NUM(s.toInt)
     case ("keyword", s) => T_KWD(s)
-     case ("string", s) => T_STR(s)
+    case ("string", s) => T_STR(s)
   }
 
   // by using collect we filter out all unwanted tokens
@@ -499,15 +545,25 @@ class RIMP {
 
   // ------------ Interpreter -------------------
 
-//  import $file.parser
-//  import parser._
+  //  import $file.parser
+  //  import parser._
 
   // an interpreter for the WHILE language
-  type Env = Map[String, Int]
+  type Env = Map[String, Any]
+
+  def strList2IntList(in: String) : List[Int] =
+    in.stripPrefix("List(").stripSuffix(")").split(", ").map(_.toInt).toList
+
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
-    case Var(s) => env(s)
+    case Var(s) => env(s).asInstanceOf[Int]
+    case ArrayVar(id, index) => {
+      val valsList = env(id).toString
+      val intList = strList2IntList(valsList)
+      val indexVal = eval_aexp(index, env)
+      intList(indexVal)
+    }
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
     case Aop("*", a1, a2) => eval_aexp(a1, env) * eval_aexp(a2, env)
@@ -528,16 +584,24 @@ class RIMP {
     case Not(b) => !eval_bexp(b, env)
   }
 
+  def eval_arrVals(values: List[AExp], env: Env): List[Int] =
+    values.map(x => eval_aexp(x, env))
+
   def eval_stmt(s: Stmt, env: Env): Env =
     s match {
-    case Skip => env
-    case Assign(x, a) => env + (x -> eval_aexp(a, env))
-//    case IArray(a) => env + Array[Int](eval_aexp(a, env))
-    case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
-    case While(b, bl) =>
-      if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))
-      else env
-  }
+      case Skip => env
+      case Assign(x, a) => env + (x -> eval_aexp(a, env))
+      case AssignArr(id, values) => env + (id -> eval_arrVals(values, env))
+      case UpdateArrIndex(id, index, newVal) => {
+        val newVal_eval = eval_aexp(newVal, env)
+        val index_eval = eval_aexp(index, env)
+        env + (id -> strList2IntList(env(id).toString).updated(index_eval, newVal_eval))
+      }
+      case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
+      case While(b, bl) =>
+        if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))
+        else env
+    }
 
   def eval_bl(bl: Block, env: Env): Env = bl match {
     case Nil => env
@@ -547,100 +611,100 @@ class RIMP {
   def eval(bl: Block): Env = eval_bl(bl, Map())
 
 
-//  def question2() = {
-//    println("""Parsing "if (a < b) then skip else a := a * b + 1"""")
-//    println(parse("if (a < b) then skip else a := a * b + 1"))
-//    println("------------------------------------------------")
-//
-//    println("""Parsing "fibProg"""")
-//    println(parse(fibProg))
-//    println("------------------------------------------------")
-//
-//    println("""Parsing "loopProg"""")
-//    println(parse("start := 1000;" + loopProg))
-//    println("------------------------------------------------")
-//
-//    println("""Parsing "primesProg"""")
-//    println(parse(primesProg))
-//    println("------------------------------------------------")
-//
-//    println("""Parsing "collatzProg"""")
-//    println(parse(collatzProg))
-//    println("------------------------------------------------")
-//
-//  }
-//
-//
-//  def question3FibProg() = {
-//    println("""Evaluating "fibProg"""")
-//    println(eval(parse(fibProg)))
-//  }
-//
-//
-//  def question3LoopProg() = {
-//    for (i <- 100 to 1000 by 100) {
-//      println(s"""Evaluating "loopProg" with start := $i""")
-//      println(time(eval(parse(s"start := $i;" + loopProg))))
-//      println("------------------------------------------------")
-//    }
-//  }
-//
-//
-//  def question3PrimesProg() = {
-//    println("""Evaluating "primesProg"""")
-//    println(eval(parse(primesProg)))
-//  }
-//
-//
-//  def question3CollatzProg() = {
-//    println("""Evaluating "collatzProg"""")
-//    print(eval(parse(collatzProg)))
-//  }
-//
-//
-//  def testFact() = {
-//    println("""Evaluating "fact"""")
-//    val fact =
-//      """n := 4;
-//    result := 1;
-//     while (n > 0) do {
-//      result := n * result;
-//      n := n - 1
-//    };
-//    write result"""
-//    print(eval(parse(fact)))
-//  }
+  //  def question2() = {
+  //    println("""Parsing "if (a < b) then skip else a := a * b + 1"""")
+  //    println(parse("if (a < b) then skip else a := a * b + 1"))
+  //    println("------------------------------------------------")
+  //
+  //    println("""Parsing "fibProg"""")
+  //    println(parse(fibProg))
+  //    println("------------------------------------------------")
+  //
+  //    println("""Parsing "loopProg"""")
+  //    println(parse("start := 1000;" + loopProg))
+  //    println("------------------------------------------------")
+  //
+  //    println("""Parsing "primesProg"""")
+  //    println(parse(primesProg))
+  //    println("------------------------------------------------")
+  //
+  //    println("""Parsing "collatzProg"""")
+  //    println(parse(collatzProg))
+  //    println("------------------------------------------------")
+  //
+  //  }
+  //
+  //
+  //  def question3FibProg() = {
+  //    println("""Evaluating "fibProg"""")
+  //    println(eval(parse(fibProg)))
+  //  }
+  //
+  //
+  //  def question3LoopProg() = {
+  //    for (i <- 100 to 1000 by 100) {
+  //      println(s"""Evaluating "loopProg" with start := $i""")
+  //      println(time(eval(parse(s"start := $i;" + loopProg))))
+  //      println("------------------------------------------------")
+  //    }
+  //  }
+  //
+  //
+  //  def question3PrimesProg() = {
+  //    println("""Evaluating "primesProg"""")
+  //    println(eval(parse(primesProg)))
+  //  }
+  //
+  //
+  //  def question3CollatzProg() = {
+  //    println("""Evaluating "collatzProg"""")
+  //    print(eval(parse(collatzProg)))
+  //  }
+  //
+  //
+  //  def testFact() = {
+  //    println("""Evaluating "fact"""")
+  //    val fact =
+  //      """n := 4;
+  //    result := 1;
+  //     while (n > 0) do {
+  //      result := n * result;
+  //      n := n - 1
+  //    };
+  //    write result"""
+  //    print(eval(parse(fact)))
+  //  }
 
 
-//  val primesProg =
-//    """end := 100;
-//  n := 2;
-//  while (n < end) do {
-//    f := 2;
-//    tmp := 0;
-//    while ((f < n / 2 + 1) && (tmp == 0)) do {
-//      if ((n / f) * f == n) then  { tmp := 1 } else { skip };
-//      f := f + 1
-//    };
-//    if (tmp == 0) then { write(n) } else { skip };
-//    n  := n + 1
-//  }"""
-//
-//
-//  val fibProg =
-//    """write "Fib: ";
-//    read n;
-//    minus1 := 1;
-//    minus2 := 0;
-//    while n > 0 do {
-//    temp := minus2;
-//    minus2 := minus1 + minus2;
-//    minus1 := temp;
-//    n := n - 1
-//    };
-//    write "Result: ";
-//    write minus2 ;
-//    write "\n""""
+  //  val primesProg =
+  //    """end := 100;
+  //  n := 2;
+  //  while (n < end) do {
+  //    f := 2;
+  //    tmp := 0;
+  //    while ((f < n / 2 + 1) && (tmp == 0)) do {
+  //      if ((n / f) * f == n) then  { tmp := 1 } else { skip };
+  //      f := f + 1
+  //    };
+  //    if (tmp == 0) then { write(n) } else { skip };
+  //    n  := n + 1
+  //  }"""
+  //
+  //
+  //  val fibProg =
+  //    """write "Fib: ";
+  //    read n;
+  //    minus1 := 1;
+  //    minus2 := 0;
+  //    while n > 0 do {
+  //    temp := minus2;
+  //    minus2 := minus1 + minus2;
+  //    minus1 := temp;
+  //    n := n - 1
+  //    };
+  //    write "Result: ";
+  //    write minus2 ;
+  //    write "\n""""
 
 
   val exampleProg1 =
@@ -754,4 +818,4 @@ class RIMP {
     println("------------------------------------------------")
   }
 
-  }
+}

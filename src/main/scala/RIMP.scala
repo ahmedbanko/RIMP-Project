@@ -397,7 +397,6 @@ class RIMP {
   abstract class AExp
   abstract class BExp
 
-  abstract class ArrExp
 
 
   type Block = List[Stmt]
@@ -409,6 +408,7 @@ class RIMP {
   case class Assign(s: String, a: AExp) extends Stmt
 
   case class AssignArr(id: String, values: List[AExp]) extends Stmt
+  case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
   case class ArrayVar(id: String, index: AExp) extends AExp
 
   case class Var(s: String) extends AExp
@@ -465,7 +465,9 @@ class RIMP {
   lazy val Stmt: Parser[Tokens, Stmt] =
     (p"skip").map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
-      (IdParser ~ p":=" ~ ArrBlock).map {case id ~ _ ~ values => AssignArr(id, values)}
+      (IdParser ~ p":=" ~ ArrBlock).map {case id ~ _ ~ values => AssignArr(id, values)} ||
+      (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map{
+        case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)} ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w) } ||
@@ -549,12 +551,16 @@ class RIMP {
   // an interpreter for the WHILE language
   type Env = Map[String, Any]
 
+  def strList2IntList(in: String) : List[Int] =
+    in.stripPrefix("List(").stripSuffix(")").split(", ").map(_.toInt).toList
+
+
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
     case Var(s) => env(s).asInstanceOf[Int]
     case ArrayVar(id, index) => {
       val valsList = env(id).toString
-      val intList = valsList.stripPrefix("List(").stripSuffix(")").split(", ").map(_.toInt).toList
+      val intList = strList2IntList(valsList)
       val indexVal = eval_aexp(index, env)
       intList(indexVal)
     }
@@ -586,6 +592,11 @@ class RIMP {
       case Skip => env
       case Assign(x, a) => env + (x -> eval_aexp(a, env))
       case AssignArr(id, values) => env + (id -> eval_arrVals(values, env))
+      case UpdateArrIndex(id, index, newVal) => {
+        val newVal_eval = eval_aexp(newVal, env)
+        val index_eval = eval_aexp(index, env)
+        env + (id -> strList2IntList(env(id).toString).updated(index_eval, newVal_eval))
+      }
       case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
       case While(b, bl) =>
         if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))

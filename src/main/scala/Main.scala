@@ -7,7 +7,12 @@ object Main extends App {
 //  println(rimp.parse("arr := [1, 2, 3]; arr1[2] := 10"))
 //  print(rimp.eval(rimp.parse("arr := [1, 2, 3]; i1before := arr[1]; arr[1] := 10; i1after := arr[1]")))
 val t = new Tokenizer()
-print(t.tokenize("arr := [1, 2, 3]; i1before := arr[1]; arr[1] := 10; i1after := arr[1]"))
+print(t.tokenize("""fact := 1;
+    n := 3;
+    while (!n > 0) do {
+        fact := !n * !fact;
+        n := !n - 1}
+        """))
 
 
 

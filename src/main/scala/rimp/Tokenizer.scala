@@ -19,7 +19,6 @@ class Tokenizer extends Lexer {
   case class T_KWD(s: String) extends Token
 //  case class T_STR(s: String) extends Token
 
-
   val token: PartialFunction[(String, String), Token] = {
     case ("semicolon", _) => T_SEMI
     case ("comma", _) => T_COMMA
@@ -39,6 +38,4 @@ class Tokenizer extends Lexer {
   // by using collect we filter out all unwanted tokens
   def tokenize(s: String): List[Token] =
    lexing_simp(RIMP_REGS, s).collect(token)
-
-
 }

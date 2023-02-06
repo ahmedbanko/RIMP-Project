@@ -48,7 +48,7 @@ class Parser extends Tokenizer {
       case T_RSQRB :: tail if (sin == "]") => Set((T_RSQRB, tail))
       case T_LPAREN :: tail if (sin == "{") => Set((T_LPAREN, tail))
       case T_RPAREN :: tail if (sin == "}") => Set((T_RPAREN, tail))
-      case T_STR(s) :: tail if (s == sin) => Set((T_STR(s), tail))
+//      case T_STR(s) :: tail if (s == sin) => Set((T_STR(s), tail))
       case T_ID(s) :: tail if (s == sin) => Set((T_ID(s), tail))
       case T_OP(s) :: tail if (s == sin) => Set((T_OP(s), tail))
       case T_NUM(n) :: tail if (n.toString == sin) => Set((T_NUM(n), tail))
@@ -57,13 +57,13 @@ class Parser extends Tokenizer {
     }
   }
 
-
-  case object StrParser extends Parser[Tokens, String] {
-    def parse(in: Tokens) = in match {
-      case T_STR(s) :: tail => Set((s, tail))
-      case _ => Set()
-    }
-  }
+//
+//  case object StrParser extends Parser[Tokens, String] {
+//    def parse(in: Tokens) = in match {
+//      case T_STR(s) :: tail => Set((s, tail))
+//      case _ => Set()
+//    }
+//  }
 
 
   case object CommaParser extends Parser[Tokens, String] {

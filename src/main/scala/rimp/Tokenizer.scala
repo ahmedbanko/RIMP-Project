@@ -17,7 +17,7 @@ class Tokenizer extends Lexer {
   case class T_OP(s: String) extends Token
   case class T_NUM(n: Int) extends Token
   case class T_KWD(s: String) extends Token
-  case class T_STR(s: String) extends Token
+//  case class T_STR(s: String) extends Token
 
 
   val token: PartialFunction[(String, String), Token] = {
@@ -33,7 +33,7 @@ class Tokenizer extends Lexer {
     case ("operation", s) => T_OP(s)
     case ("number", s) => T_NUM(s.toInt)
     case ("keyword", s) => T_KWD(s)
-    case ("string", s) => T_STR(s)
+//    case ("string", s) => T_STR(s)
   }
 
   // by using collect we filter out all unwanted tokens

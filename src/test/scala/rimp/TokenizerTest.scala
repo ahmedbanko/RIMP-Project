@@ -14,48 +14,21 @@ class TokenizerTest extends AnyFunSuite {
         n := !n - 1}
         """
 
-  val exampleProg2 =
-    """a := 49;
-                b := 28;
-                while ~(!a = !b) do
-                if !a > !b
-                then a := !a - !b
-                else b := !b - !a""".stripMargin
-
-  val exampleProg3 =
-    """x := 12;
-    while !x > 1 do {
-        r := !x;
-        (while !r > 1 do
-            r := !r - 2);
-        if !r = 0
-        then x := !x / 2
-        else x := 3 * !x + 1}""".stripMargin
-
-
-  val exampleProg4 =
-    """x := 13;
-    factor := 2;
-    isprime := 1;
-    limit := !x / 2 + 1;
-    while !factor < !limit do {
-        r := !x;
-        (while !r > !factor - 1 do
-            r := !r - !factor);
-        (if !r = 0 then isprime := 0 else skip);
-        factor := !factor + 1}""".stripMargin
-
-  val exampleProg5 =
-    """n := 10;
-    a := 1;
-    b := 1;
-    i := 0;
-    while !i < !n do {
-        tmp := !a;
-        a := !b;
-        b := !tmp + !a;
-        i := !i + 1}""".stripMargin
-  val list = List(prog, exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5)
+  test("Test partial function") {
+    assert(tk.token.apply("semicolon", ";") == tk.T_SEMI)
+    assert(tk.token.apply("comma", ",") == tk.T_COMMA)
+    assert(tk.token.apply("parenthesis", "{") == tk.T_LPAREN)
+    assert(tk.token.apply("parenthesis", "}") == tk.T_RPAREN)
+    assert(tk.token.apply("brackets", "(") == tk.T_LBRACK)
+    assert(tk.token.apply("brackets", ")") == tk.T_RBRACK)
+    assert(tk.token.apply("sqr_brackets", "[") == tk.T_LSQRB)
+    assert(tk.token.apply("sqr_brackets", "]") == tk.T_RSQRB)
+    assert(tk.token.apply("id", "someID") == tk.T_ID("someID"))
+    assert(tk.token.apply("operation", "someOP") == tk.T_OP("someOP"))
+    assert(tk.token.apply("number", "1") == tk.T_NUM(1))
+    assert(tk.token.apply("keyword", "if") == tk.T_KWD("if"))
+//    assert(tk.token.apply("string", "someStr") == tk.T_STR("someStr"))
+  }
 
   test("Test tokenizer.tokenize should return expected value") {
     val prog_expeted = List(tk.T_ID("arr"), tk.T_OP(":="),

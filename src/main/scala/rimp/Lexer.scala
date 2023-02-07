@@ -18,6 +18,7 @@ class Lexer {
   case class RANGE(cs: Set[Char]) extends Rexp // a set of characters—for character ranges
   case class PLUS(r: Rexp) extends Rexp // one or more times r
   case class OPTIONAL(r: Rexp) extends Rexp
+  case class CFUN(f: Char => Boolean) extends Rexp
 
   // values
   abstract class Val
@@ -72,6 +73,7 @@ class Lexer {
     case RANGE(cs) => false
     case PLUS(r) => nullable(r)
     case OPTIONAL(r) => true
+    case CFUN(f) => false
   }
 
   def der(c: Char, r: Rexp): Rexp = r match {
@@ -89,6 +91,7 @@ class Lexer {
     case RANGE(cs) => if (cs.contains(c)) ONE else ZERO
     case PLUS(r) => SEQ(der(c, r), STAR(r))
     case OPTIONAL(r) => der(c, r)
+    case CFUN(f) => if (f(c)) ONE else ZERO
   }
 
 
@@ -158,16 +161,16 @@ class Lexer {
     case (NTIMES(r, n), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
   }
 
-//  // lexing functions without simplification
-//  def lex(r: Rexp, s: List[Char]): Val = s match {
-//    case Nil => if (nullable(r)) mkeps(r) else {
-//      throw new Exception("lexing error")
-//    }
-//    case c :: cs => inj(r, c, lex(der(c, r), cs))
-//  }
+  // lexing functions without simplification
+  def lex(r: Rexp, s: List[Char]): Val = s match {
+    case Nil => if (nullable(r)) mkeps(r) else {
+      throw new Exception("lexing error")
+    }
+    case c :: cs => inj(r, c, lex(der(c, r), cs))
+  }
 
-//  def lexing(r: Rexp, s: String) =
-//    env(lex(r, s.toList))
+  def lexing(r: Rexp, s: String) =
+    env(lex(r, s.toList))
 
 
   // some "rectification" functions for simplification
@@ -230,6 +233,13 @@ class Lexer {
 
   def lexing_simp(r: Rexp, s: String) =
     env(lex_simp(r, s.toList))
+
+
+  def Range(s: List[Char]): Rexp = s match {
+    case Nil => ZERO
+    case c :: Nil => CHAR(c)
+    case c :: s => ALT(CHAR(c), Range(s))
+  }
 
 
   val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false"

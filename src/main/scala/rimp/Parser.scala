@@ -135,6 +135,9 @@ class Parser extends Tokenizer {
 
   case class ArrayVar(id: String, index: AExp) extends AExp
 
+  case class AssignThread(id: String, bl: Block) extends Stmt
+  case class RunThread(id: String) extends Stmt
+
   case class Var(s: String) extends AExp
 
   case class Num(i: Int) extends AExp
@@ -200,6 +203,8 @@ class Parser extends Tokenizer {
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w) } ||
+      (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
+      (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
 
   //  ArrBlock.map(ArrVal)
@@ -214,7 +219,6 @@ class Parser extends Tokenizer {
   // blocks (enclosed in curly braces)
   lazy val Block: Parser[Tokens, Block] =
     (p"{" ~ Stmts ~ p"}").map { case _ ~ y ~ _ => y } ||
-      (p"(" ~ Stmts ~ p")").map { case _ ~ y ~ _ => y } ||
       Stmt.map(s => List(s))
 
   // helper function to parse programs (filters whitespases and comments)

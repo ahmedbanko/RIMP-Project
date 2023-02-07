@@ -44,6 +44,19 @@ class Interpreter extends Parser {
   def eval_arrVals(values: List[AExp], env: Env): List[Int] =
     values.map(x => eval_aexp(x, env))
 
+
+  def eval_thread(bl: Block, env: Env) : Env = {
+    import java.util.concurrent._
+    val executor = Executors.newSingleThreadExecutor()
+    val callable: Callable[Env] = () => {
+      eval_bl(bl, env)
+    }
+    val future = executor.submit(callable)
+    val result = future.get()
+    executor.shutdown()
+    result
+  }
+
   def eval_stmt(s: Stmt, env: Env): Env =
     s match {
       case Skip => env
@@ -54,6 +67,8 @@ class Interpreter extends Parser {
         val index_eval = eval_aexp(index, env)
         env + (id -> strList2IntList(env(id).toString).updated(index_eval, newVal_eval))
       }
+      case AssignThread(id, bl) => env + (id -> bl)
+      case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
       case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
       case While(b, bl) =>
         if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))

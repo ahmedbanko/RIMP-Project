@@ -242,8 +242,8 @@ class Lexer {
   }
 
 
-  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false"
-  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~"
+  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false" | "run" | "thread"
+  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" |"?" | "~"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString
   val LETTER: Rexp = RANGE(alphabet.toSet)
   val SYM: Rexp = RANGE((alphabet ++ """._><=;,\:""").toSet)

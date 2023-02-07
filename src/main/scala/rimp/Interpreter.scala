@@ -45,16 +45,20 @@ class Interpreter extends Parser {
     values.map(x => eval_aexp(x, env))
 
 
-  def eval_thread(bl: Block, env: Env) : Env = {
-    import java.util.concurrent._
-    val executor = Executors.newSingleThreadExecutor()
-    val callable: Callable[Env] = () => {
-      eval_bl(bl, env)
+
+// TODO: Make sure the thread works correctly
+ var e: Env = Map()
+  def eval_thread(bl: Block, env: Env): Env = {
+    e = e ++ env
+//    this.synchronized {
+    val thread = new Thread {
+      override def run {
+        e = e ++ eval_bl(bl, env)
+      }
     }
-    val future = executor.submit(callable)
-    val result = future.get()
-    executor.shutdown()
-    result
+      thread.start()
+//    }
+    e
   }
 
   def eval_stmt(s: Stmt, env: Env): Env =
@@ -67,6 +71,14 @@ class Interpreter extends Parser {
         val index_eval = eval_aexp(index, env)
         env + (id -> strList2IntList(env(id).toString).updated(index_eval, newVal_eval))
       }
+      case WriteVar(x) =>
+        println(env(x));
+        env
+      case WriteStr(x) =>
+        //Expands standard Scala escape sequences in a string. copied from:
+        //https://www.scala-lang.org/api/2.13.6/scala/StringContext$.html
+        print(StringContext.processEscapes(x.substring(1, x.length - 1)))
+        env
       case AssignThread(id, bl) => env + (id -> bl)
       case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
       case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
@@ -80,6 +92,6 @@ class Interpreter extends Parser {
     case s :: bl => eval_bl(bl, eval_stmt(s, env))
   }
 
-  def eval(bl: Block): Env = eval_bl(bl, Map())
+  def eval(bl: Block): Unit = eval_bl(bl, Map())
 
 }

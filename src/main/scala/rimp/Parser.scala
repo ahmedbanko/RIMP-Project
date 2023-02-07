@@ -48,7 +48,7 @@ class Parser extends Tokenizer {
       case T_RSQRB :: tail if (sin == "]") => Set((T_RSQRB, tail))
       case T_LPAREN :: tail if (sin == "{") => Set((T_LPAREN, tail))
       case T_RPAREN :: tail if (sin == "}") => Set((T_RPAREN, tail))
-//      case T_STR(s) :: tail if (s == sin) => Set((T_STR(s), tail))
+      case T_STR(s) :: tail if (s == sin) => Set((T_STR(s), tail))
       case T_ID(s) :: tail if (s == sin) => Set((T_ID(s), tail))
       case T_OP(s) :: tail if (s == sin) => Set((T_OP(s), tail))
       case T_NUM(n) :: tail if (n.toString == sin) => Set((T_NUM(n), tail))
@@ -57,13 +57,13 @@ class Parser extends Tokenizer {
     }
   }
 
-//
-//  case object StrParser extends Parser[Tokens, String] {
-//    def parse(in: Tokens) = in match {
-//      case T_STR(s) :: tail => Set((s, tail))
-//      case _ => Set()
-//    }
-//  }
+
+  case object StrParser extends Parser[Tokens, String] {
+    def parse(in: Tokens) = in match {
+      case T_STR(s) :: tail => Set((s, tail))
+      case _ => Set()
+    }
+  }
 
 
   case object CommaParser extends Parser[Tokens, String] {
@@ -144,7 +144,8 @@ class Parser extends Tokenizer {
 
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
 
-
+  case class WriteStr(s: String) extends Stmt
+  case class WriteVar(s: String) extends Stmt
   case object True extends BExp
 
   case object False extends BExp
@@ -196,6 +197,8 @@ class Parser extends Tokenizer {
   lazy val Stmt: Parser[Tokens, Stmt] =
     (p"skip").map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
+      (p"write" ~ StrParser).map[Stmt] { case _ ~ y => WriteStr(y) } ||
+      (p"write" ~ p"!" ~ IdParser).map[Stmt] { case _ ~ _ ~ y => WriteVar(y) } ||
       (IdParser ~ p":=" ~ ArrBlock).map { case id ~ _ ~ values => AssignArr(id, values) } ||
       (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)

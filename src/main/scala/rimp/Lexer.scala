@@ -242,14 +242,14 @@ class Lexer {
   }
 
 
-  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false"
-  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~"
+  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false" | "run" | "thread" | "write"
+  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" |"?" | "~"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString
   val LETTER: Rexp = RANGE(alphabet.toSet)
   val SYM: Rexp = RANGE((alphabet ++ """._><=;,\:""").toSet)
   val WHITESPACE: Rexp = PLUS(" " | "\n" | "\t" | "\r")
   val DIGIT: Rexp = RANGE("0123456789".toSet)
-  //  val STRING: Rexp = "\"" ~ (SYM | WHITESPACE | DIGIT).% ~ "\""
+  val STRING: Rexp = "\"" ~ (SYM | WHITESPACE | DIGIT).% ~ "\""
   val RSQRB: Rexp = "]"
   val LSQRB: Rexp = "["
   val RPAREN: Rexp = "}"
@@ -267,6 +267,7 @@ class Lexer {
     ("number" $ NUM) |
     ("semicolon" $ SEMI) |
     ("comma" $ COMMA) |
+    ("string" $ STRING) |
     ("parenthesis" $ (LPAREN | RPAREN)) |
     ("brackets" $ (RBRACK | LBRACK)) |
     ("sqr_brackets" $ (RSQRB | LSQRB)) |

@@ -222,7 +222,7 @@ class Lexer {
 
 
   val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false"
-  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~"
+  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~" | "?"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString
   val LETTER: Rexp = RANGE(alphabet.toSet)
   val SYM: Rexp = RANGE((alphabet ++ """._><=;,\:""").toSet)
@@ -235,6 +235,7 @@ class Lexer {
   val LPAREN: Rexp = "{"
   val RBRACK: Rexp = ")"
   val LBRACK: Rexp = "("
+  val BAR: Rexp = "|"
   val SEMI: Rexp = ";"
   val COMMA: Rexp = ","
   val ID: Rexp = LETTER ~ ("_" | LETTER | DIGIT).%
@@ -246,6 +247,7 @@ class Lexer {
     ("number" $ NUM) |
     ("semicolon" $ SEMI) |
     ("comma" $ COMMA) |
+    ("bar" $ BAR) |
     ("string" $ STRING) |
     ("parenthesis" $ (LPAREN | RPAREN)) |
     ("brackets" $ (RBRACK | LBRACK)) |

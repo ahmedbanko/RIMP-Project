@@ -13,6 +13,7 @@ class Tokenizer extends Lexer {
   case object T_RPAREN extends Token
   case object T_LBRACK extends Token
   case object T_RBRACK extends Token
+  case object T_BAR extends Token
   case class T_ID(s: String) extends Token
   case class T_OP(s: String) extends Token
   case class T_NUM(n: Int) extends Token
@@ -28,6 +29,7 @@ class Tokenizer extends Lexer {
     case ("brackets", ")") => T_RBRACK
     case ("sqr_brackets", "[") => T_LSQRB
     case ("sqr_brackets", "]") => T_RSQRB
+    case ("bar", "|") => T_BAR
     case ("id", s) => T_ID(s)
     case ("operation", s) => T_OP(s)
     case ("number", s) => T_NUM(s.toInt)

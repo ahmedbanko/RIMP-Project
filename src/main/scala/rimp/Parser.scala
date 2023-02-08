@@ -80,6 +80,13 @@ class Parser extends Tokenizer {
     }
   }
 
+  case object BarParser extends Parser[Tokens, String] {
+    def parse(in: Tokens) = in match {
+      case T_BAR :: tail => Set(("|", tail))
+      case _ => Set()
+    }
+  }
+
 
   case object IdParser extends Parser[Tokens, String] {
     def parse(in: Tokens) = in match {
@@ -119,7 +126,7 @@ class Parser extends Tokenizer {
 
 
   type Block = List[Stmt]
-  type ArrBlock = List[AExp]
+  type ArrBlock = Array[AExp]
 
   case object Skip extends Stmt
 
@@ -129,7 +136,8 @@ class Parser extends Tokenizer {
 
   case class Assign(s: String, a: AExp) extends Stmt
 
-  case class AssignArr(id: String, values: List[AExp]) extends Stmt
+  case class AssignArr(id: String, values: Array[AExp]) extends Stmt
+  case class ArrayWithSize(id: String, size: AExp) extends Stmt
 
   case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
 
@@ -170,13 +178,12 @@ class Parser extends Tokenizer {
       NumParser.map(Num)
 
   lazy val ArrBlock: Parser[Tokens, ArrBlock] =
-    (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y } ||
-      (p"[" ~ p"]").map { case _ ~ _ => List() }
+    (p"[" ~ ArrVals ~ p"]").map { case _ ~ y ~ _ => y }
 
 
   lazy val ArrVals: Parser[Tokens, ArrBlock] =
-    (AExp ~ CommaParser ~ ArrVals).map[ArrBlock] { case x ~ _ ~ z => x :: z } ||
-      AExp.map(x => List(x))
+    (AExp ~ CommaParser ~ ArrVals).map[ArrBlock] { case x ~ _ ~ z => x +: z } ||
+      AExp.map(x => Array(x))
 
 
   // boolean expressions with some simple nesting
@@ -200,6 +207,8 @@ class Parser extends Tokenizer {
       (p"write" ~ StrParser).map[Stmt] { case _ ~ y => WriteStr(y) } ||
       (p"write" ~ p"!" ~ IdParser).map[Stmt] { case _ ~ _ ~ y => WriteVar(y) } ||
       (IdParser ~ p":=" ~ ArrBlock).map { case id ~ _ ~ values => AssignArr(id, values) } ||
+      (IdParser ~ p":=" ~ BarParser ~ AExp ~ BarParser).map {
+        case id ~ _ ~ _ ~ size ~ _  => ArrayWithSize(id, size)} ||
       (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||

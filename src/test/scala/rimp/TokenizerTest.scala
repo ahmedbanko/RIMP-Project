@@ -23,11 +23,11 @@ class TokenizerTest extends AnyFunSuite {
     assert(tk.token.apply("brackets", ")") == tk.T_RBRACK)
     assert(tk.token.apply("sqr_brackets", "[") == tk.T_LSQRB)
     assert(tk.token.apply("sqr_brackets", "]") == tk.T_RSQRB)
+    assert(tk.token.apply("bar", "|") == tk.T_BAR)
     assert(tk.token.apply("id", "someID") == tk.T_ID("someID"))
     assert(tk.token.apply("operation", "someOP") == tk.T_OP("someOP"))
     assert(tk.token.apply("number", "1") == tk.T_NUM(1))
     assert(tk.token.apply("keyword", "if") == tk.T_KWD("if"))
-//    assert(tk.token.apply("string", "someStr") == tk.T_STR("someStr"))
   }
 
   test("Test tokenizer.tokenize should return expected value") {

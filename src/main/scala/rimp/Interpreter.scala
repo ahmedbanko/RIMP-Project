@@ -8,18 +8,22 @@ class Interpreter extends Parser {
   // an interpreter for the WHILE language
   type Env = Map[String, Any]
 
-  def strList2IntList(in: String): List[Int] =
-    in.stripPrefix("List(").stripSuffix(")").split(", ").map(_.toInt).toList
+//  def strList2IntArray(in: String): Array[Int] = {
+//    val out = in.stripPrefix("Array(").stripSuffix(")").split(", ").map(_.toInt).toArray
+//    print(out)
+//    out
+//  }
 
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
     case Var(s) => env(s).asInstanceOf[Int]
     case ArrayVar(id, index) => {
-      val valsList = env(id).toString
-      val intList = strList2IntList(valsList)
+
+      val valsList = env(id).asInstanceOf[Array[Int]]
+//      val intList = strList2IntArray(valsList)
       val indexVal = eval_aexp(index, env)
-      intList(indexVal)
+      valsList(indexVal)
     }
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
@@ -41,7 +45,7 @@ class Interpreter extends Parser {
     case Not(b) => !eval_bexp(b, env)
   }
 
-  def eval_arrVals(values: List[AExp], env: Env): List[Int] =
+  def eval_arrVals(values: Array[AExp], env: Env): Array[Int] =
     values.map(x => eval_aexp(x, env))
 
 
@@ -70,7 +74,7 @@ class Interpreter extends Parser {
       case UpdateArrIndex(id, index, newVal) => {
         val newVal_eval = eval_aexp(newVal, env)
         val index_eval = eval_aexp(index, env)
-        env + (id -> strList2IntList(env(id).toString).updated(index_eval, newVal_eval))
+        env + (id -> env(id).asInstanceOf[Array[Int]].updated(index_eval, newVal_eval))
       }
       case WriteVar(x) =>
         println(env(x));

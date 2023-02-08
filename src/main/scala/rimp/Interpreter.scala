@@ -85,6 +85,6 @@ class Interpreter extends Parser {
     case s :: bl => eval_bl(bl, eval_stmt(s, env))
   }
 
-  def eval(bl: Block): Env = eval_bl(bl, Map())
+  def eval(bl: Block, env: Env = Map()): Env = eval_bl(bl, env)
 
 }

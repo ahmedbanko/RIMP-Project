@@ -239,7 +239,7 @@ class Lexer {
   val SEMI: Rexp = ";"
   val COMMA: Rexp = ","
   val ID: Rexp = LETTER ~ ("_" | LETTER | DIGIT).%
-  val NUM: Rexp = "0" | (RANGE("123456789".toSet) ~ STAR(DIGIT))
+  val NUM: Rexp = "0" | OPTIONAL(CHAR('-')) ~ (RANGE("123456789".toSet) ~ STAR(DIGIT))
 
   val RIMP_REGS = (("keyword" $ KEYWORD) |
     ("id" $ ID) |

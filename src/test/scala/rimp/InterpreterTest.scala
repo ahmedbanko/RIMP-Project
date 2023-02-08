@@ -105,4 +105,55 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("i11").asInstanceOf[Int] == 11)
   }
 
+
+  val arrProg =
+    """arr := |10|;
+       i := 0;
+       while (!i < 10) do {
+        arr[!i] := !i;
+        i := !i + 1
+       };
+       ii := 0;
+       while (!ii < 10) do {
+          x := arr[!ii];
+            write !x;
+            ii := !ii + 1
+           }"""
+
+  test("Test creating empty array with size should have a correct size") {
+    env = interp.eval(interp.parse("arr := |10|"))
+    assert(env("arr").asInstanceOf[Array[Int]].length == 10)
+  }
+
+  test("Assigning array indexes should work correctly") {
+    env = interp.eval(interp.parse(arrProg))
+    assert(env("i").asInstanceOf[Int] == 10)
+    assert(env("ii").asInstanceOf[Int] == 10)
+    assert(env("x").asInstanceOf[Int] == 9)
+    val arr = env("arr").asInstanceOf[Array[Int]]
+    for(i <- 0  until 10){
+      assert(arr(i) == i)
+    }
+  }
+
+  test("Test creating an array with values") {
+    env = interp.eval(interp.parse("arr := [1, 2, 3]"))
+    assert(env("arr").asInstanceOf[Array[Int]].length == 3)
+    val arr = env("arr").asInstanceOf[Array[Int]]
+    assert(arr(0) == 1)
+    assert(arr(1) == 2)
+    assert(arr(2) == 3)
+  }
+
+  test("Test getting value from array indexes") {
+    env = interp.eval(interp.parse("arr := [1, 2, 3]; i0 := arr[0]; i1 := arr[1]; i2 := arr[2]"))
+    assert(env("arr").asInstanceOf[Array[Int]].length == 3)
+    assert(env("i0").asInstanceOf[Int] == 1)
+    assert(env("i1").asInstanceOf[Int] == 2)
+    assert(env("i2").asInstanceOf[Int] == 3)
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](interp.eval(interp.parse("i3 := arr[3]"), env))
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](interp.eval(interp.parse("i := arr[-1]"), env))
+  }
+
+
 }

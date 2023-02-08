@@ -1,27 +1,33 @@
-import rimp.{RIMP_tester, Tokenizer}
+import rimp.Interpreter
 
 object Main extends App {
-  val rimp: RIMP_tester = new RIMP_tester
-//  rimp.testEvaluate()
-//  print(rimp.lexing_simp(rimp.RIMP_REGS, ("x := 10; arr := [1,2,x]")).filter(_._1 != "whitespace"))
-//  println(rimp.parse("arr := [1, 2, 3]; arr1[2] := 10"))
-//  print(rimp.eval(rimp.parse("arr := [1, 2, 3]; i1before := arr[1]; arr[1] := 10; i1after := arr[1]")))
-val t = new Tokenizer()
-print(t.tokenize("""fact := 1;
-    n := 3;
-    while (!n > 0) do {
-        fact := !n * !fact;
-        n := !n - 1}
-        """))
-
-
-
+//  val p = new Parser()
+  val i = new Interpreter()
+  val threadProg =
+    """a := 1000;
+       xt2 := 0;
+      thread t1 := {
+        write "t1 start\n";
+        while (!a > 1) do {
+          skip;
+          a := !a - 1
+        };
+         write "t1 end\n"
+      };
+      thread t2 := {
+        xt2 := 1996;
+        write "t2 start\n";
+        skip;
+        write "t2 end\n"
+       };
+        run ?t1;
+        run ?t2;
+        write !a;
+        write !xt2""".stripMargin
+  val expected = List(i.AssignThread("t", List(i.If(i.Bop("<",i.Var("a"),i.Var("b")),List(i.Skip),List(i.Assign("a",i.Aop("+",i.Aop("*",i.Var("a"),i.Var("b")),i.Num(1))))))))
+//  println(i.parse(threadProg))
+//  println(i.parse(threadProg) == expected)
+i.eval(i.parse(threadProg))
 }
 
 
-//val t = new Thread {
-//  override def run(): Unit = {
-//    println("Running in a new thread")
-//  }
-//}
-//t.start()

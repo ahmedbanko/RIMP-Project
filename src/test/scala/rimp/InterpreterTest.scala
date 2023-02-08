@@ -3,7 +3,7 @@ package rimp
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AnyFunSuite
 
-class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndAfterEach{
+class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndAfterEach {
 
   val interp = new Interpreter()
   type Env = Map[String, Any]

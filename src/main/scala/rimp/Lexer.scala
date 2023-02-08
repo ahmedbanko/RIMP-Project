@@ -158,17 +158,6 @@ class Lexer {
     case (NTIMES(r, n), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
   }
 
-//  // lexing functions without simplification
-//  def lex(r: Rexp, s: List[Char]): Val = s match {
-//    case Nil => if (nullable(r)) mkeps(r) else {
-//      throw new Exception("lexing error")
-//    }
-//    case c :: cs => inj(r, c, lex(der(c, r), cs))
-//  }
-
-//  def lexing(r: Rexp, s: String) =
-//    env(lex(r, s.toList))
-
 
   // some "rectification" functions for simplification
   def F_ID(v: Val): Val = v
@@ -239,7 +228,7 @@ class Lexer {
   val SYM: Rexp = RANGE((alphabet ++ """._><=;,\:""").toSet)
   val WHITESPACE: Rexp = PLUS(" " | "\n" | "\t" | "\r")
   val DIGIT: Rexp = RANGE("0123456789".toSet)
-  //  val STRING: Rexp = "\"" ~ (SYM | WHITESPACE | DIGIT).% ~ "\""
+  val STRING: Rexp = "\"" ~ (SYM | WHITESPACE | DIGIT).% ~ "\""
   val RSQRB: Rexp = "]"
   val LSQRB: Rexp = "["
   val RPAREN: Rexp = "}"
@@ -257,6 +246,7 @@ class Lexer {
     ("number" $ NUM) |
     ("semicolon" $ SEMI) |
     ("comma" $ COMMA) |
+    ("string" $ STRING) |
     ("parenthesis" $ (LPAREN | RPAREN)) |
     ("brackets" $ (RBRACK | LBRACK)) |
     ("sqr_brackets" $ (RSQRB | LSQRB)) |

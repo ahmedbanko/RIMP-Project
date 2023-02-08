@@ -61,10 +61,6 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(!interp.eval_bexp(interp.Not(interp. Bop("=", interp.Num(10), interp.Num(10))), env))
   }
 
-  test("Test evaluation of array values") {
-
-    assert(interp.eval_arrVals(Array(interp.Aop("-", interp.Num(10), interp.Num(1)), interp.Num(8), interp.Num(7)), env) sameElements Array(9, 8, 7))
-  }
 
   test("Test evaluation of statements") {
     assert(interp.eval_stmt(interp.Skip, env) == env)
@@ -86,6 +82,13 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(interp.eval_stmt(interp.While(interp.False, List(interp.Skip)), env) == env)
     env = interp.eval_stmt(interp.While(interp.Bop(">", interp.Var("i"), interp.Num(0)), List(interp.Assign("i", interp.Num(0)))), env)
     assert(env("i").asInstanceOf[Int] == 0)
+    env = Map() // clear environment
+    env = interp.eval_stmt(interp.ArrayWithSize("arr",interp.Num(10)), env)
+    assert(env("arr").asInstanceOf[Array[Int]].length == 10)
+    assert(env("arr").asInstanceOf[Array[Int]](0) == 0)
+    assert(env("arr").asInstanceOf[Array[Int]](9) == 0)
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[Array[Int]](-1) == 0)
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[Array[Int]](10) == 0)
   }
 
   test("Test evaluation of blocks") {

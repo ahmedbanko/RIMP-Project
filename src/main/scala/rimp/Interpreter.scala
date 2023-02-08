@@ -8,20 +8,12 @@ class Interpreter extends Parser {
   // an interpreter for the WHILE language
   type Env = Map[String, Any]
 
-//  def strList2IntArray(in: String): Array[Int] = {
-//    val out = in.stripPrefix("Array(").stripSuffix(")").split(", ").map(_.toInt).toArray
-//    print(out)
-//    out
-//  }
-
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
     case Var(s) => env(s).asInstanceOf[Int]
     case ArrayVar(id, index) => {
-
       val valsList = env(id).asInstanceOf[Array[Int]]
-//      val intList = strList2IntArray(valsList)
       val indexVal = eval_aexp(index, env)
       valsList(indexVal)
     }
@@ -45,20 +37,15 @@ class Interpreter extends Parser {
     case Not(b) => !eval_bexp(b, env)
   }
 
-  def eval_arrVals(values: Array[AExp], env: Env): Array[Int] =
-    values.map(x => eval_aexp(x, env))
 
-
-
+  @volatile var e: Env = Map()
 // TODO: Make sure the thread works correctly
-
   def eval_thread(bl: Block, env: Env): Env = {
-    @volatile var e: Env = Map()
     this.synchronized {
       e = e ++ env
       val thread = new Thread {
         override def run {
-          e = e ++ eval_bl(bl, env)
+          e = e ++ eval_bl(bl, e)
         }
       }
       thread.start()
@@ -70,7 +57,8 @@ class Interpreter extends Parser {
     s match {
       case Skip => env
       case Assign(x, a) => env + (x -> eval_aexp(a, env))
-      case AssignArr(id, values) => env + (id -> eval_arrVals(values, env))
+      case AssignArr(id, values) => env + (id -> values.map(x => eval_aexp(x, env)))
+      case ArrayWithSize(id, size) => env + (id -> new Array[Int](eval_aexp(size, env)))
       case UpdateArrIndex(id, index, newVal) => {
         val newVal_eval = eval_aexp(newVal, env)
         val index_eval = eval_aexp(index, env)

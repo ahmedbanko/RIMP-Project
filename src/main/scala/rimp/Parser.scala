@@ -162,7 +162,6 @@ class Parser extends Tokenizer {
 
   case class Not(b: BExp) extends BExp
 
-
   // arithmetic expressions
   lazy val AExp: Parser[Tokens, AExp] =
     (Te ~ p"+" ~ AExp).map[AExp] { case x ~ _ ~ z => Aop("+", x, z) } ||

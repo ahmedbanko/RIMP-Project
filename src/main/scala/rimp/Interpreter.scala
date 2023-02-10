@@ -6,6 +6,7 @@ class Interpreter extends Parser {
 
   // ------------ RIMP.Interpreter -------------------
 
+//  case class Mem(env: Map[String, Any], bStack: mutable.Stack[(String, Stmt)])
 
 //  val backStack = new mutable.Stack[(String, Any, Stmt)]()
 
@@ -66,7 +67,12 @@ class Interpreter extends Parser {
         (e, bStack)
       }
 //      case AssignArr(id, values) => env + (id -> values.map(x => eval_aexp(x, env)))
-//      case ArrayWithSize(id, size) => env + (id -> new Array[Int](eval_aexp(size, env)))
+      case ArrayWithSize(id, size) => {
+        bStack.push((id, ArrayWithSize(id, size)))
+        val assign_res = new Array[Int](eval_aexp(size, env))
+        val e = env._1 + (id -> assign_res)
+        (e, bStack)
+      }
 //      case UpdateArrIndex(id, index, newVal) => {
 //        val newVal_eval = eval_aexp(newVal, env)
 //        val index_eval = eval_aexp(index, env)
@@ -95,4 +101,8 @@ class Interpreter extends Parser {
 
   def eval(bl: Block, env: Env = (Map().empty, new mutable.Stack[(String, Stmt)]), bStack: mutable.Stack[(String, Stmt)] = mutable.Stack()): Env = eval_bl(bl, env, bStack)
 
+  def revEval(env: Env) : Env = {
+    val backBlock: Block = env._2.map(e => e._2).toList
+   eval(backBlock, (Map().empty, new mutable.Stack))
+  }
 }

@@ -117,12 +117,12 @@ class Parser extends Tokenizer {
     def map[S](f: => T => S) = new MapParser[I, T, S](p, f)
   }
 
-  // the abstract syntax trees for the WHILE language
-  abstract class Stmt
+  abstract class Exp
+  abstract class Stmt extends Exp
 
-  abstract class AExp
+  abstract class AExp extends Exp
 
-  abstract class BExp
+  abstract class BExp extends Exp
 
 
   type Block = List[Stmt]
@@ -132,35 +132,32 @@ class Parser extends Tokenizer {
 
   case class If(a: BExp, bl1: Block, bl2: Block) extends Stmt
 
-  case class While(b: BExp, bl: Block) extends Stmt
+
+
+  case class While(b: BExp, bl: Block, counter: Int) extends Stmt
 
   case class Assign(s: String, a: AExp) extends Stmt
-
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
   case class ArrayWithSize(id: String, size: AExp) extends Stmt
-
   case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
-
   case class ArrayVar(id: String, index: AExp) extends AExp
-
   case class AssignThread(id: String, bl: Block) extends Stmt
   case class RunThread(id: String) extends Stmt
 
   case class Var(s: String) extends AExp
-
   case class Num(i: Int) extends AExp
-
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
 
   case class WriteStr(s: String) extends Stmt
   case class WriteVar(s: String) extends Stmt
+
   case object True extends BExp
-
   case object False extends BExp
-
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
 
-  case class Not(b: BExp) extends BExp
+  case class Not(b: BExp) extends BExp {
+    override def toString: String = s"~$b"
+  }
 
   // arithmetic expressions
   lazy val AExp: Parser[Tokens, AExp] =
@@ -213,7 +210,7 @@ class Parser extends Tokenizer {
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w) } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, 0) } ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
@@ -233,7 +230,53 @@ class Parser extends Tokenizer {
       Stmt.map(s => List(s))
 
   // helper function to parse programs (filters whitespases and comments)
-  def parse(program: String) = {
+  def parse(program: String): List[Stmt]  = {
     Stmts.parse_all(tokenize(program)).head
   }
+
+
+
+//
+//  def rev(stmt: Stmt): List[String] = stmt match {
+//    case
+//  }
+
+  def rev(stmts: List[Stmt]) = stmts.reverse
+
+
+  var counter = -1
+  def wCounter(): String = {
+    s"k_${counter + 1}"
+  }
+  private def stmt2String(stmt: Exp): String = stmt match {
+    case Skip => "skip"
+    case If(a, bl1, bl2) => s"if (${stmt2String(a)}) then {${(bl1.map(x => stmt2String(x)).mkString(";\n"))}} else {${bl2.map(x => stmt2String(x)).mkString(";\n")}}"
+    case While(b, bl, counter) => s"${wCounter()} := $counter;\nwhile (${stmt2String(b)}) do {\n${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case Assign(s, a) => s"$s := ${stmt2String(a)}"
+    case AssignArr(id, values) => s"$id := ${values.mkString("[", ", ", "]")}"
+    case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"
+    case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2String(index)}] := ${stmt2String(newVal)}"
+    case ArrayVar(id, index) => s"$id[${stmt2String(index)}]"
+    case AssignThread(id, bl) => s"thread $id :=\n{${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case RunThread(id) => s"run ?$id"
+    case Var(s) => s"!$s"
+    case Num(i) => s"$i"
+    case Aop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
+    case Bop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
+    case True => "true"
+    case False => "false"
+    case Not(b) => s"~${stmt2String(b)}"
+  }
+
+  def stmts2String(ast: List[Stmt], output: List[String] = List()) : List[String] = ast match {
+    case Nil => output
+    case s::rest => {
+      if(rest.isEmpty) {
+        stmt2String(s)::stmts2String(rest)
+      }else {
+        s"${stmt2String(s)};"::stmts2String(rest)
+      }
+    }
+  }
+
 }

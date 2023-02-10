@@ -38,19 +38,11 @@ class Interpreter extends Parser {
   }
 
 
-  @volatile var e: Env = Map()
-// TODO: Make sure the thread works correctly
   def eval_thread(bl: Block, env: Env): Env = {
-    this.synchronized {
-      e = e ++ env
-      val thread = new Thread {
-        override def run {
-          e = e ++ eval_bl(bl, e)
-        }
-      }
-      thread.start()
-    }
-    e
+    new Thread(() => {
+      eval_bl(bl, env)
+    }).start()
+    env
   }
 
   def eval_stmt(s: Stmt, env: Env): Env =

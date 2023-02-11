@@ -90,13 +90,15 @@ object Main extends App {
 //       n =: 3;
 //       fact =: 1
 //        """
-  val p = i.parse(exampleProg4)
-  p.foreach(println)
-  println(i.ast2Code(p))
-  println("----------------")
-  println(i.rev(p))
-  val env = i.eval(p)
-  println(env)
+  val p = i.parse(exampleProg1)
+////  p.foreach(println)
+//  println(i.ast2Code(p))
+//  println("----------------")
+//  println(i.rev(p))
+//  val env = i.eval(p)
+//  println(env)
+
+  i.evalBySteps(p, Map())
 
 }
 

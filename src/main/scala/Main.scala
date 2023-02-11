@@ -29,13 +29,56 @@ object Main extends App {
 //  println(env2("a"))
 //  println(env2("arr").asInstanceOf[Array[Int]].mkString("Array(", ", ", ")"))
 
-  val fact =
+  val exampleProg1 =
     """fact := 1;
-      n := 10;
-      while (!n >= 0) do {
-          fact := !n * !fact;
-          n := !n - 1}
-          """
+  n := 3;
+  while (!n > 0) do {
+      fact := !n * !fact;
+      n := !n - 1}
+      """
+
+  val exampleProg2 =
+    """a := 49;
+              b := 28;
+              while ~(!a = !b) do
+              if !a > !b
+              then a := !a - !b
+              else b := !b - !a""".stripMargin
+
+  val exampleProg3 =
+    """x := 12;
+  while !x > 1 do {
+      r := !x;
+      while !r > 1 do {
+          r := !r - 2
+          };
+      if !r = 0
+      then x := !x / 2
+      else x := 3 * !x + 1}""".stripMargin
+
+
+  val exampleProg4 =
+    """x := 13;
+  factor := 2;
+  isprime := 1;
+  limit := !x / 2 + 1;
+  while !factor < !limit do {
+      r := !x;
+      (while !r > !factor - 1 do
+          r := !r - !factor);
+      (if !r = 0 then isprime := 0 else skip);
+      factor := !factor + 1}""".stripMargin
+
+  val exampleProg5 =
+    """n := 10;
+  a := 1;
+  b := 1;
+  i := 0;
+  while !i < !n do {
+      tmp := !a;
+      a := !b;
+      b := !tmp + !a;
+      i := !i + 1}""".stripMargin
 
 //  val reversedShouldBe =
 //    """while-0 (!k_0 > 0) do {
@@ -47,12 +90,14 @@ object Main extends App {
 //       n =: 3;
 //       fact =: 1
 //        """
-  val p = i.parse(fact)
+  val p = i.parse(exampleProg4)
   p.foreach(println)
-  i.stmts2String(p).foreach(println)
+  println(i.ast2Code(p))
+  println("----------------")
+  println(i.rev(p))
   val env = i.eval(p)
   println(env)
-  println(i.eval(i.parse("x := !while_0_k"), env))
+
 }
 
 

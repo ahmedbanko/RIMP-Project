@@ -3,7 +3,6 @@ package rimp
 class Parser extends Tokenizer {
   //  --------- RIMP.Parser -------------
 
-  case class Counter(id: String, count: Int)
 
   case class ~[+A, +B](x: A, y: B)
 
@@ -20,10 +19,11 @@ class Parser extends Tokenizer {
            if tl.isEmpty) yield hd
   }
 
-  var counter = -1
-  def counterID(): String = {
-    s"while_${counter + 1}_k"
+  var count = -1
+  def counterID(c: Int): String = {
+    s"while_${c}_k"
   }
+  case class Counter(id: String, count: Int = 0)
 
 
   // parser combinators
@@ -202,6 +202,11 @@ class Parser extends Tokenizer {
       (p"(" ~ BExp ~ p")").map[BExp] { case _ ~ x ~ _ => x }
 
 
+  def nxtCount(): Int = {
+    count += 1
+    count
+  }
+
   // a single statement
   lazy val Stmt: Parser[Tokens, Stmt] =
     (p"skip").map[Stmt] { _ => Skip } ||
@@ -216,8 +221,7 @@ class Parser extends Tokenizer {
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(counterID(), 0))
-      } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(counterID(nxtCount())))} ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
@@ -248,13 +252,10 @@ class Parser extends Tokenizer {
 //    case
 //  }
 
-  def rev(stmts: List[Stmt]) = stmts.reverse
-
-
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2) => s"if (${stmt2String(a)}) then {${(bl1.map(x => stmt2String(x)).mkString(";\n"))}} else {${bl2.map(x => stmt2String(x)).mkString(";\n")}}"
-    case While(b, bl, counter) => s"${counter.id} := ${counter.count};\nwhile (${stmt2String(b)}) do {\n${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case If(a, bl1, bl2) => s"if ${stmt2String(a)} then {\n${(bl1.map(x => stmt2String(x)).mkString(";\n"))}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case While(b, bl, counter) => s"${counter.id} := ${counter.count};\nwhile ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
     case Assign(s, a) => s"$s := ${stmt2String(a)}"
     case AssignArr(id, values) => s"$id := ${values.mkString("[", ", ", "]")}"
     case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"
@@ -265,21 +266,64 @@ class Parser extends Tokenizer {
     case Var(s) => s"!$s"
     case Num(i) => s"$i"
     case Aop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
-    case Bop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
+    case Bop(o, a1, a2) => s"(${stmt2String(a1)} $o ${stmt2String(a2)})"
     case True => "true"
     case False => "false"
     case Not(b) => s"~${stmt2String(b)}"
   }
 
-  def stmts2String(ast: List[Stmt], output: List[String] = List()) : List[String] = ast match {
+  private def stmts2String(ast: List[Stmt], output: List[String] = List()) : List[String] = ast match {
     case Nil => output
     case s::rest => {
       if(rest.isEmpty) {
         stmt2String(s)::stmts2String(rest)
       }else {
-        s"${stmt2String(s)};"::stmts2String(rest)
+        s"${stmt2String(s)};\n"::stmts2String(rest)
       }
     }
   }
 
+  private def stmt2RevStr(stmt: Exp): String = stmt match {
+    case Skip => "skip"
+    case If(a, bl1, bl2) => s"if ${stmt2RevStr(a)} then {\n${(bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n"))}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+    case While(b, bl, counter) => {
+      val whileId = counter.id.split("_")(1)
+      s"while-$whileId (!${counter.id} > 0) do {\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")};\n${counter.id} := !${counter.id} - 1\n}"
+    }
+    case Assign(s, a) => s"$s =: ${stmt2RevStr(a)}"
+    case AssignArr(id, values) => s"$id =: ${values.mkString("[", ", ", "]")}"
+    case ArrayWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
+    case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2RevStr(index)}] =: ${stmt2RevStr(newVal)}"
+    case ArrayVar(id, index) => s"$id[${stmt2RevStr(index)}]"
+    case AssignThread(id, bl) => s"thread $id =:\n{${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+    case RunThread(id) => s"run ?$id"
+    case Var(s) => s"!$s"
+    case Num(i) => s"$i"
+    case Aop(o, a1, a2) => s"${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)}"
+    case Bop(o, a1, a2) => s"(${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)})"
+    case True => "true"
+    case False => "false"
+    case Not(b) => s"~${stmt2RevStr(b)}"
+  }
+
+  private def stmts2RevStr(ast: List[Stmt], output: List[String] = List()): List[String] = ast match {
+    case Nil => output
+    case s :: rest => {
+      if (rest.isEmpty) {
+        stmt2RevStr(s) :: stmts2RevStr(rest)
+      } else {
+        s"${stmt2RevStr(s)};\n" :: stmts2RevStr(rest)
+      }
+    }
+  }
+
+  def revAST(stmts: List[Stmt]) : List[Stmt] = stmts.reverse
+
+  def rev(ast: List[Stmt]) : String = {
+    stmts2RevStr(ast.reverse).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
+  }
+
+  def ast2Code(ast: List[Stmt]): String = {
+    stmts2String(ast).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
+  }
 }

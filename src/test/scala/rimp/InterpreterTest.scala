@@ -14,6 +14,11 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     env = Map() // clear environment
   }
 
+  var counter = -1
+  def counterID(): String = {
+    s"while_${counter + 1}_k"
+  }
+
 
 
   val prog = "arr := [1+1, 2, 3]; i1before := arr[1]; arr[1] := 10; i1after := arr[1]"
@@ -79,8 +84,8 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(interp.eval_stmt(interp.If(interp.True, List(interp.Skip), List(interp.Assign("i", interp.Num(10)))), env) == env)
     env = interp.eval_stmt(interp.If(interp.False, List(interp.Skip), List(interp.Assign("i", interp.Num(1)))), env)
     assert(env("i").asInstanceOf[Int] == 1)
-    assert(interp.eval_stmt(interp.While(interp.False, List(interp.Skip)), env) == env)
-    env = interp.eval_stmt(interp.While(interp.Bop(">", interp.Var("i"), interp.Num(0)), List(interp.Assign("i", interp.Num(0)))), env)
+    assert(interp.eval_stmt(interp.While(interp.False, List(interp.Skip), interp.Counter(counterID(), 0)), env) == env)
+    env = interp.eval_stmt(interp.While(interp.Bop(">", interp.Var("i"), interp.Num(0)), List(interp.Assign("i", interp.Num(0))), interp.Counter(counterID(), 0)), env)
     assert(env("i").asInstanceOf[Int] == 0)
     env = Map() // clear environment
     env = interp.eval_stmt(interp.ArrayWithSize("arr",interp.Num(10)), env)

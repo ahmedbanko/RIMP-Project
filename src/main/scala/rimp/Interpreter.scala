@@ -56,14 +56,6 @@ class Interpreter extends Parser {
         val index_eval = eval_aexp(index, env)
         env + (id -> env(id).asInstanceOf[Array[Int]].updated(index_eval, newVal_eval))
       }
-      case WriteVar(x) =>
-        println(env(x));
-        env
-      case WriteStr(x) =>
-        //Expands standard Scala escape sequences in a string. copied from:
-        //https://www.scala-lang.org/api/2.13.6/scala/StringContext$.html
-        print(StringContext.processEscapes(x.substring(1, x.length - 1)))
-        env
       case AssignThread(id, bl) => env + (id -> bl)
       case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
       case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)

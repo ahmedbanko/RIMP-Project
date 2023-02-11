@@ -121,7 +121,6 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
        ii := 0;
        while (!ii < 10) do {
           x := arr[!ii];
-            write !x;
             ii := !ii + 1
            }"""
 

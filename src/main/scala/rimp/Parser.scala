@@ -155,10 +155,6 @@ class Parser extends Tokenizer {
   case class Var(s: String) extends AExp
   case class Num(i: Int) extends AExp
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
-
-  case class WriteStr(s: String) extends Stmt
-  case class WriteVar(s: String) extends Stmt
-
   case object True extends BExp
   case object False extends BExp
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
@@ -211,8 +207,6 @@ class Parser extends Tokenizer {
   lazy val Stmt: Parser[Tokens, Stmt] =
     (p"skip").map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
-      (p"write" ~ StrParser).map[Stmt] { case _ ~ y => WriteStr(y) } ||
-      (p"write" ~ p"!" ~ IdParser).map[Stmt] { case _ ~ _ ~ y => WriteVar(y) } ||
       (IdParser ~ p":=" ~ ArrBlock).map { case id ~ _ ~ values => AssignArr(id, values) } ||
       (IdParser ~ p":=" ~ BarParser ~ AExp ~ BarParser).map {
         case id ~ _ ~ _ ~ size ~ _  => ArrayWithSize(id, size)} ||

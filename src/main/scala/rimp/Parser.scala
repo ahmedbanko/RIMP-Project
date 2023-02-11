@@ -3,6 +3,8 @@ package rimp
 class Parser extends Tokenizer {
   //  --------- RIMP.Parser -------------
 
+  case class Counter(id: String, count: Int)
+
   case class ~[+A, +B](x: A, y: B)
 
   // constraint for the input
@@ -17,6 +19,12 @@ class Parser extends Tokenizer {
       for ((hd, tl) <- parse(in);
            if tl.isEmpty) yield hd
   }
+
+  var counter = -1
+  def counterID(): String = {
+    s"while_${counter + 1}_k"
+  }
+
 
   // parser combinators
 
@@ -134,7 +142,7 @@ class Parser extends Tokenizer {
 
 
 
-  case class While(b: BExp, bl: Block, counter: Int) extends Stmt
+  case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
 
   case class Assign(s: String, a: AExp) extends Stmt
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
@@ -155,9 +163,7 @@ class Parser extends Tokenizer {
   case object False extends BExp
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
 
-  case class Not(b: BExp) extends BExp {
-    override def toString: String = s"~$b"
-  }
+  case class Not(b: BExp) extends BExp
 
   // arithmetic expressions
   lazy val AExp: Parser[Tokens, AExp] =
@@ -210,7 +216,8 @@ class Parser extends Tokenizer {
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, 0) } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(counterID(), 0))
+      } ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
@@ -244,14 +251,10 @@ class Parser extends Tokenizer {
   def rev(stmts: List[Stmt]) = stmts.reverse
 
 
-  var counter = -1
-  def wCounter(): String = {
-    s"k_${counter + 1}"
-  }
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
     case If(a, bl1, bl2) => s"if (${stmt2String(a)}) then {${(bl1.map(x => stmt2String(x)).mkString(";\n"))}} else {${bl2.map(x => stmt2String(x)).mkString(";\n")}}"
-    case While(b, bl, counter) => s"${wCounter()} := $counter;\nwhile (${stmt2String(b)}) do {\n${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case While(b, bl, counter) => s"${counter.id} := ${counter.count};\nwhile (${stmt2String(b)}) do {\n${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
     case Assign(s, a) => s"$s := ${stmt2String(a)}"
     case AssignArr(id, values) => s"$id := ${values.mkString("[", ", ", "]")}"
     case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"

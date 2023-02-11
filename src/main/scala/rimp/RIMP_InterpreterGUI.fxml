@@ -57,8 +57,8 @@
       <TextField alignment="TOP_LEFT" prefHeight="143.0" prefWidth="640.0" promptText="Type RIMP code" />
       <HBox>
          <children>
-            <Button mnemonicParsing="false" text="Translate" onAction="#translateClicked" />
-            <Button mnemonicParsing="false" text="Evaluate"  onAction="#evaluateClicked" />
+            <Button mnemonicParsing="false" text="Translate" />
+            <Button mnemonicParsing="false" text="Evaluate"  />
          </children>
       </HBox>
       <TextField alignment="TOP_LEFT" prefHeight="143.0" prefWidth="640.0" promptText="Reverse code shows here" />

@@ -19,12 +19,29 @@ class Parser extends Tokenizer {
            if tl.isEmpty) yield hd
   }
 
-  var count = -1
-  def counterID(c: Int): String = {
+  case class Counter(id: String, count: Int = 0)
+  case class IfResult(id: String, result: Int = 0)
+
+  var while_count: Int = -1
+  var if_count: Int = -1
+
+  def whileID(c: Int): String = {
     s"W_${c}_k"
   }
-  case class Counter(id: String, count: Int = 0)
 
+  def ifID(c: Int): String = {
+    s"if_${c}_result"
+  }
+
+  def nxtWCount(): Int = {
+    while_count += 1
+    while_count
+  }
+
+  def nxtIfCount(): Int = {
+    if_count += 1
+    if_count
+  }
 
   // parser combinators
 
@@ -138,9 +155,7 @@ class Parser extends Tokenizer {
 
   case object Skip extends Stmt
 
-  case class If(a: BExp, bl1: Block, bl2: Block) extends Stmt
-
-
+  case class If(a: BExp, bl1: Block, bl2: Block, result: IfResult) extends Stmt
 
   case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
 
@@ -198,11 +213,6 @@ class Parser extends Tokenizer {
       (p"(" ~ BExp ~ p")").map[BExp] { case _ ~ x ~ _ => x }
 
 
-  def nxtCount(): Int = {
-    count += 1
-    count
-  }
-
   // a single statement
   lazy val Stmt: Parser[Tokens, Stmt] =
     (p"skip").map[Stmt] { _ => Skip } ||
@@ -214,8 +224,8 @@ class Parser extends Tokenizer {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
-        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(counterID(nxtCount())))} ||
+        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, IfResult(ifID(nxtWCount()))) } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(whileID(nxtIfCount())))} ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
@@ -248,7 +258,10 @@ class Parser extends Tokenizer {
 
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2) => s"if ${stmt2String(a)} then {\n${(bl1.map(x => stmt2String(x)).mkString(";\n"))}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case If(a, bl1, bl2, if_res) => {
+      val ifId = if_res.id.split("_")(1)
+      s"${if_res.id} := ${if_res.result};\nif-$ifId ${stmt2String(a)} then {\n${(bl1.map(x => stmt2String(x)).mkString(";\n"))}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    }
     case While(b, bl, counter) => {
       val whileId = counter.id.split("_")(1)
       s"${counter.id} := ${counter.count};\nwhile-$whileId${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
@@ -282,7 +295,10 @@ class Parser extends Tokenizer {
 
   private def stmt2RevStr(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2) => s"if ${stmt2RevStr(a)} then {\n${(bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n"))}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+    case If(a, bl1, bl2, if_res) => {
+      val ifId = if_res.id.split("_")(1)
+      s"if-${ifId} (!${if_res.id}) then {\n${(bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n"))}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+    }
     case While(b, bl, counter) => {
       val whileId = counter.id.split("_")(1)
       s"while-$whileId(!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"

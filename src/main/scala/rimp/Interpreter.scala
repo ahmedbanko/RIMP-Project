@@ -58,7 +58,10 @@ class Interpreter extends Parser {
       }
       case AssignThread(id, bl) => env + (id -> bl)
       case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
-      case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
+      case If(b, bl1, bl2, if_res) => {
+        if (eval_bexp(b, env)) eval_bl(bl1, env + (if_res.id -> 1)) // represents true
+        else eval_bl(bl2, env + (if_res.id -> 0)) // represents false
+      }
       case While(b, bl, counter) => {
         if (eval_bexp(b, env)) {
           eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env + (counter.id -> (counter.count+1))))

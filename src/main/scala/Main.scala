@@ -29,6 +29,20 @@ object Main extends App {
 //  println(env2("a"))
 //  println(env2("arr").asInstanceOf[Array[Int]].mkString("Array(", ", ", ")"))
 
+  val ifProg =
+    """x := 1;
+    y := 2;
+    if (!x < !y) then {
+    x := 0;
+    if ~(!x > !y) then {
+    x := 22
+    } else {
+    x := 99
+    }
+    } else {
+    x := 11
+    }
+      """
   val exampleProg1 =
     """fact := 1;
   n := 3;
@@ -90,15 +104,15 @@ object Main extends App {
 //       n =: 3;
 //       fact =: 1
 //        """
-  val p = i.parse(exampleProg1)
-////  p.foreach(println)
-//  println(i.ast2Code(p))
-//  println("----------------")
-//  println(i.rev(p))
-//  val env = i.eval(p)
-//  println(env)
+  val p = i.parse(ifProg)
+// p.foreach(println)
+  println(i.ast2Code(p))
+  println("----------------")
+  println(i.rev(p))
+  val env = i.eval(p)
+  println(env)
 
-  i.evalBySteps(p, Map())
+//  i.evalBySteps(p, Map())
 
 }
 

@@ -44,11 +44,13 @@ object Main extends App {
     }
       """
   val exampleProg1 =
-    """fact := 1;
-  n := 3;
-  while (!n > 0) do {
-      fact := !n * !fact;
-      n := !n - 1}
+    """
+       fact := 1;
+       n := 3;
+       while (!n > 0) do {
+            fact := !n * !fact;
+            n := !n - 1
+       }
       """
 
   val exampleProg2 =
@@ -104,15 +106,39 @@ object Main extends App {
 //       n =: 3;
 //       fact =: 1
 //        """
-  val p = i.parse(ifProg)
-// p.foreach(println)
-  println(i.ast2Code(p))
-  println("----------------")
-  println(i.rev(p))
-  val env = i.eval(p)
-  println(env)
 
-//  i.evalBySteps(p, Map())
+
+  val stacks =
+    """n := 10;
+       arr := [1, 2, 3];
+       arr[2] := 4;
+       while (!n > 0) do {
+       if (!n = 10) then {
+              arr[2] := arr[1]
+           } else {
+              skip
+           };
+           n := !n - 1
+       }
+
+      """.stripMargin
+  val p = i.parse(stacks)
+  val env = i.eval(p)
+// env("arr").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
+// env("arr2").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
+  println(env)
+  println(i.print_top(env))
+  println("done")
+
+  //  i.evalBySteps(p, Map())
+
+
+  """
+     Map(fact -> 6, n -> 0, W_1_k -> 3)
+    """.stripMargin
+
+
+
 
 }
 

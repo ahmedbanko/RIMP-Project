@@ -1,5 +1,7 @@
 package rimp
 
+import scala.collection.mutable
+
 class Interpreter extends Parser {
 
   // ------------ RIMP.Interpreter -------------------
@@ -11,11 +13,11 @@ class Interpreter extends Parser {
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
-    case Var(s) => env(s).asInstanceOf[Int]
+    case Var(s) => env(s).asInstanceOf[mutable.Stack[Int]].top
     case ArrayVar(id, index) => {
-      val valsList = env(id).asInstanceOf[Array[Int]]
+      val valsList = env(id).asInstanceOf[Array[mutable.Stack[Int]]]
       val indexVal = eval_aexp(index, env)
-      valsList(indexVal)
+      valsList(indexVal).top
     }
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
@@ -48,19 +50,39 @@ class Interpreter extends Parser {
   def eval_stmt(s: Stmt, env: Env): Env =
     s match {
       case Skip => env
-      case Assign(x, a) => env + (x -> eval_aexp(a, env))
-      case AssignArr(id, values) => env + (id -> values.map(x => eval_aexp(x, env)))
-      case ArrayWithSize(id, size) => env + (id -> new Array[Int](eval_aexp(size, env)))
+      case Assign(x, a) => {
+        val old_stack = env.getOrElse(x, mutable.Stack[Int](0))
+        env + (x -> old_stack.asInstanceOf[mutable.Stack[Int]].push(eval_aexp(a, env)))
+      }
+      case AssignArr(id, values) => {
+        val old_array = env.getOrElse(id, Array.fill(values.length)(mutable.Stack[Int](0))).asInstanceOf[Array[mutable.Stack[Int]]]
+        for ((arr, i) <- old_array.zipWithIndex) {
+          arr.push(eval_aexp(values(i), env))
+        }
+        env + (id -> old_array)
+      }
+      case ArrayWithSize(id, size) => {
+        val new_array = Array.fill(eval_aexp(size, env))(mutable.Stack[Int](0))
+        env + (id -> new_array)
+      }
       case UpdateArrIndex(id, index, newVal) => {
         val newVal_eval = eval_aexp(newVal, env)
         val index_eval = eval_aexp(index, env)
-        env + (id -> env(id).asInstanceOf[Array[Int]].updated(index_eval, newVal_eval))
+        val arr = env(id).asInstanceOf[Array[mutable.Stack[Int]]]
+        arr(index_eval).push(newVal_eval)
+        env
       }
       case AssignThread(id, bl) => env + (id -> bl)
       case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
       case If(b, bl1, bl2, if_res) => {
-        if (eval_bexp(b, env)) eval_bl(bl1, env + (if_res.id -> 1)) // represents true
-        else eval_bl(bl2, env + (if_res.id -> 0)) // represents false
+        val stack = env.getOrElse(if_res.id, mutable.Stack[Int](-1)).asInstanceOf[mutable.Stack[Int]]
+        if (eval_bexp(b, env)) {
+          stack.push(1) // represents true
+          eval_bl(bl1, env + (if_res.id -> stack))
+        } else {
+          stack.push(0) // represents false
+          eval_bl(bl2, env + (if_res.id -> stack))
+        }
       }
       case While(b, bl, counter) => {
         if (eval_bexp(b, env)) {
@@ -78,5 +100,17 @@ class Interpreter extends Parser {
   }
 
   def eval(bl: Block, env: Env = Map()): Env = eval_bl(bl, env)
+
+  def print_top(env: Env) = {
+    env.map { case (key, value) =>
+      value match {
+        case i: Int => s"$key -> $i"
+        case s: mutable.Stack[Int] => s"$key -> ${s.top}"
+        case s_l: Array[mutable.Stack[Int] ] => {
+          s"$key -> Array[${s_l.map(s => s.top).mkString(", ")}]"
+        }
+      }
+    }.mkString("Map(", ", ", ")")
+  }
 
 }

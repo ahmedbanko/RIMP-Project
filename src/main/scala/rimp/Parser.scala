@@ -1,5 +1,7 @@
 package rimp
 
+import scala.collection.mutable
+
 class Parser extends Tokenizer {
   //  --------- RIMP.Parser -------------
 
@@ -20,7 +22,7 @@ class Parser extends Tokenizer {
   }
 
   case class Counter(id: String, count: Int = 0)
-  case class IfResult(id: String, result: Int = 0)
+  case class IfResult(id: String, result: mutable.Stack[Int] = mutable.Stack(0))
 
   var while_count: Int = -1
   var if_count: Int = -1
@@ -155,7 +157,7 @@ class Parser extends Tokenizer {
 
   case object Skip extends Stmt
 
-  case class If(a: BExp, bl1: Block, bl2: Block, result: IfResult) extends Stmt
+  case class If(a: BExp, bl1: Block, bl2: Block, boolStack: IfResult) extends Stmt
 
   case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
 

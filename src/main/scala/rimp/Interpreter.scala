@@ -75,7 +75,7 @@ class Interpreter extends Parser {
       case AssignThread(id, bl) => env + (id -> bl)
       case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
       case If(b, bl1, bl2, if_res) => {
-        val stack = env.getOrElse(if_res.id, mutable.Stack[Int](-1)).asInstanceOf[mutable.Stack[Int]]
+        val stack = env.getOrElse(if_res.id, mutable.Stack[Int](0)).asInstanceOf[mutable.Stack[Int]]
         if (eval_bexp(b, env)) {
           stack.push(1) // represents true
           eval_bl(bl1, env + (if_res.id -> stack))
@@ -101,7 +101,7 @@ class Interpreter extends Parser {
 
   def eval(bl: Block, env: Env = Map()): Env = eval_bl(bl, env)
 
-  def print_top(env: Env) = {
+  def stack_top_map(env: Env) = {
     env.map { case (key, value) =>
       value match {
         case i: Int => s"$key -> $i"
@@ -111,6 +111,63 @@ class Interpreter extends Parser {
         }
       }
     }.mkString("Map(", ", ", ")")
+  }
+
+
+  def revEval_stmt(s: Stmt, env: Env): Env =
+    s match {
+      case Skip => env
+      case Assign(x, a) => {
+        val old_stack = env(x).asInstanceOf[mutable.Stack[Int]]
+        old_stack.pop
+        env + (x -> old_stack)
+      }
+      case AssignArr(id, values) => {
+        val old_array = env(id).asInstanceOf[Array[mutable.Stack[Int]]]
+        for ((arr, i) <- old_array.zipWithIndex) {
+          if(arr.size > 1) arr.pop
+        }
+        env + (id -> old_array)
+      }
+      case ArrayWithSize(id, size) => {
+        val old_array = env(id).asInstanceOf[Array[mutable.Stack[Int]]]
+        for ((arr, i) <- old_array.zipWithIndex) {
+          if (arr.size > 1) arr.pop
+        }
+        env + (id -> old_array)
+      }
+      case UpdateArrIndex(id, index, newVal) => {
+        val index_eval = eval_aexp(index, env)
+        val arr = env(id).asInstanceOf[Array[mutable.Stack[Int]]]
+        arr(index_eval).pop
+        env + (id -> arr)
+      }
+      case AssignThread(id, bl) => env + (id -> bl)
+      case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
+      //      TODO: correct it
+      case If(b, bl1, bl2, if_res) => {
+        val stack = env(if_res.id).asInstanceOf[mutable.Stack[Int]]
+        if (stack.pop() ==  1) {
+          revEval(bl1, env + (if_res.id -> stack))
+        } else {
+          revEval(bl2, env + (if_res.id -> stack))
+        }
+      }
+      //      TODO: correct it
+      case While(b, bl, counter) => {
+        val count = env(counter.id).asInstanceOf[Int]
+        if ( count > 0) {
+          revEval_stmt(While(b, bl, Counter(counter.id, counter.count - 1)), eval_bl(bl, env + (counter.id -> (counter.count - 1))))
+        }
+        else {
+          env
+        }
+      }
+    }
+
+  def revEval(bl: Block, env: Env): Env = bl match {
+    case Nil => env
+    case s :: bl => revEval(bl, revEval_stmt(s, env))
   }
 
 }

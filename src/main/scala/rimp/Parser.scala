@@ -156,26 +156,23 @@ class Parser extends Tokenizer {
   type ArrBlock = Array[AExp]
 
   case object Skip extends Stmt
-
   case class If(a: BExp, bl1: Block, bl2: Block, boolStack: IfResult) extends Stmt
-
   case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
-
   case class Assign(s: String, a: AExp) extends Stmt
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
   case class ArrayWithSize(id: String, size: AExp) extends Stmt
   case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
-  case class ArrayVar(id: String, index: AExp) extends AExp
   case class AssignThread(id: String, bl: Block) extends Stmt
   case class RunThread(id: String) extends Stmt
 
   case class Var(s: String) extends AExp
+  case class ArrayVar(id: String, index: AExp) extends AExp
   case class Num(i: Int) extends AExp
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
+
   case object True extends BExp
   case object False extends BExp
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
-
   case class Not(b: BExp) extends BExp
 
   // arithmetic expressions
@@ -332,7 +329,23 @@ class Parser extends Tokenizer {
     }
   }
 
-  def revAST(stmts: List[Stmt]) : List[Stmt] = stmts.reverse
+  private def revStmt(stmt: Stmt) = stmt match {
+    case If (a, bl1, bl2, boolStack) => {
+      If(Bop("=", Var(boolStack.id), Num(1)), revAST(bl1), revAST(bl2), boolStack)
+    }
+    case While(b, bl, counter) => {
+        While(Bop(">", Var(counter.id), Num(0)), Assign(counter.id, Aop("-", Var(counter.id), Num(1)))::revAST(bl), counter)
+    }
+//    case AssignThread (id, bl) =>{
+//
+//    }
+    case _ => stmt
+  }
+
+  def revAST(stmts: List[Stmt], output: List[Stmt] = List()): List[Stmt] = stmts match {
+    case Nil => output
+    case hd::tail => revAST(tail, output):+revStmt(hd)
+  }
 
   def rev(ast: List[Stmt]) : String = {
     stmts2RevStr(ast.reverse).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")

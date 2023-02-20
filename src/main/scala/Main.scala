@@ -109,28 +109,25 @@ object Main extends App {
 
 
   val stacks =
-    """n := 10;
-       arr := [1, 2, 3];
-       arr[2] := 4;
-       while (!n > 0) do {
-       if (!n = 10) then {
-              arr[2] := arr[1]
-           } else {
-              skip
-           };
-           n := !n - 1
-       }
-
+    """n := |10|;
+       n[0] := 1;
+       n[1] := 2
       """.stripMargin
   val p = i.parse(stacks)
+  p.foreach(println)
+  println("------------")
+  val rp = i.revAST(p)
   val env = i.eval(p)
-// env("arr").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
-// env("arr2").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
-  println(env)
-  println(i.print_top(env))
+  println(i.stack_top_map(env))
+  val reenv = i.revEval(rp, env)
+  println(i.stack_top_map(reenv))
+//// env("arr").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
+//// env("arr2").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
+////  println(env)
+////  println(i.print_top(env))
   println("done")
-
-  //  i.evalBySteps(p, Map())
+//
+//  //  i.evalBySteps(p, Map())
 
 
   """

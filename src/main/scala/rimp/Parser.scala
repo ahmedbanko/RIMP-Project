@@ -334,7 +334,7 @@ class Parser extends Tokenizer {
       If(Bop("=", Var(boolStack.id), Num(1)), revAST(bl1), revAST(bl2), boolStack)
     }
     case While(b, bl, counter) => {
-        While(Bop(">", Var(counter.id), Num(0)), Assign(counter.id, Aop("-", Var(counter.id), Num(1)))::revAST(bl), counter)
+        While(Bop(">", Var(counter.id), Num(0)), revAST(bl), counter)
     }
 //    case AssignThread (id, bl) =>{
 //

@@ -106,14 +106,19 @@ object Main extends App {
 //       n =: 3;
 //       fact =: 1
 //        """
-
+//  if(!n > 0) then {
+//    n := 1
+//  }else{
+//    n := 2
+//  }
 
   val stacks =
-    """n := |10|;
-       n[0] := 1;
-       n[1] := 2
+    """n := 10;
+       while(!n > 0) do {
+            n := !n - 1
+       }
       """.stripMargin
-  val p = i.parse(stacks)
+  val p = i.parse(exampleProg2)
   p.foreach(println)
   println("------------")
   val rp = i.revAST(p)

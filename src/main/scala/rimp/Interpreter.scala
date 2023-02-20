@@ -7,7 +7,7 @@ class Interpreter extends Parser {
   // ------------ RIMP.Interpreter -------------------
 
 
-  // an interpreter for the WHILE language
+  // an interpreter for the RIMP language
   type Env = Map[String, Any]
 
 
@@ -142,9 +142,10 @@ class Interpreter extends Parser {
         arr(index_eval).pop
         env + (id -> arr)
       }
+//      TODO: thread reverse evaluation
       case AssignThread(id, bl) => env + (id -> bl)
       case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
-      //      TODO: correct it
+
       case If(b, bl1, bl2, if_res) => {
         val stack = env(if_res.id).asInstanceOf[mutable.Stack[Int]]
         if (stack.pop() ==  1) {
@@ -153,11 +154,10 @@ class Interpreter extends Parser {
           revEval(bl2, env + (if_res.id -> stack))
         }
       }
-      //      TODO: correct it
       case While(b, bl, counter) => {
         val count = env(counter.id).asInstanceOf[Int]
-        if ( count > 0) {
-          revEval_stmt(While(b, bl, Counter(counter.id, counter.count - 1)), eval_bl(bl, env + (counter.id -> (counter.count - 1))))
+        if (count > 0) {
+          revEval_stmt(While(b, bl, Counter(counter.id, count - 1)), revEval(bl, env + (counter.id -> (count - 1))))
         }
         else {
           env

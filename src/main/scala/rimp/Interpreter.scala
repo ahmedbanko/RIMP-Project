@@ -101,7 +101,7 @@ class Interpreter extends Parser {
 
   def eval(bl: Block, env: Env = Map()): Env = eval_bl(bl, env)
 
-  def stack_top_map(env: Env) = {
+  def stack_tops(env: Env) = {
     env.map { case (key, value) =>
       value match {
         case i: Int => s"$key -> $i"
@@ -140,7 +140,7 @@ class Interpreter extends Parser {
         val index_eval = eval_aexp(index, env)
         val arr = env(id).asInstanceOf[Array[mutable.Stack[Int]]]
         arr(index_eval).pop
-        env + (id -> arr)
+        env
       }
 //      TODO: thread reverse evaluation
       case AssignThread(id, bl) => env + (id -> bl)

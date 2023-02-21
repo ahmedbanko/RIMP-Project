@@ -118,15 +118,28 @@ object Main extends App {
             n := !n - 1
        }
       """.stripMargin
-  val p = i.parse(exampleProg2)
-  p.foreach(println)
-  println("------------")
+
+  val if_prog =
+    """
+      x := 10;
+      y := 100;
+      if (!x > 0) then {
+          x := !x - 1
+      }else{
+          skip
+      }
+      """
+  val p = i.parse(if_prog)
+//  p.foreach(println)
+//  println("------------")
   val rp = i.revAST(p)
-  println(i.ast2Code(p))
-  println("------------")
-  println(i.revAst2Code(p))
-//  val env = i.eval(p)
-//  println(i.stack_top_map(env))
+//  println(i.ast2Code(p))
+//  println("------------")
+//  println(i.revAst2Code(p))
+  val env = i.eval(p)
+  println(i.stack_tops(env))
+  val revenv = i.revEval(rp, env)
+  println(i.stack_tops(revenv))
 //  val reenv = i.revEval(rp, env)
 //  println(i.stack_top_map(reenv))
 //// env("arr").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))

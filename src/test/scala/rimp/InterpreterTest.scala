@@ -1,7 +1,7 @@
 package rimp
 
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import scala.collection.mutable
 
@@ -32,6 +32,27 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
         n := !n - 1}
         """
 
+  val if_true_prog =
+    """
+      x := 10;
+      y := 100;
+      if (!x > 0) then {
+          x := !x - 1
+      }else{
+          y := !y - 1
+      }
+      """
+
+  val if_false_prog =
+    """
+      x := 10;
+      y := 100;
+      if (!x > 100) then {
+          x := !x - 1
+      }else{
+          y := !y - 1
+      }
+      """
   test("Test evaluation of arithmatic expressions") {
     assert(interp.eval_aexp(interp.Num(1), env) == 1)
     assertThrows[java.util.NoSuchElementException](interp.eval_aexp(interp.Var("x"), env))
@@ -97,7 +118,116 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("arr").asInstanceOf[Array[mutable.Stack[Int]]](9).top == 0)
     assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[Array[mutable.Stack[Int]]](-1).top == 0)
     assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[Array[mutable.Stack[Int]]](10).top == 0)
+    env = interp.eval(interp.parse("arr := [1,2,3,4,5,6,7,8,9,10]"), env)
+    env = interp.eval(interp.parse("arr[0] := 2"), env)
+    env = interp.eval(interp.parse("arr[1] := 3"), env)
+    val stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+    assert(stack_arr(0).length == 3)
+    assert(stack_arr(0) == stack(0, 1, 2))
+    assert(stack_arr(1).length == 3)
+    assert(stack_arr(1) == stack(0, 2, 3))
+    assert(stack_arr(2).length == 2)
+    assert(stack_arr(9).length == 2)
   }
+
+
+  test("Test revEval_stmt of AssignArr") {
+    val ast = interp.parse("arr := [1,2,3,4,5,6,7,8,9,10];arr := [0,0,0,0,0,0,0,0,0,0];arr := [1,2,3,4,5,6,7,8,9,10]")
+    env = interp.eval(ast, env)
+    val stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+    for (i <- stack_arr.indices) {
+      assert(stack_arr(i).length == 4)
+    }
+    env = interp.revEval(interp.revAST(ast), env)
+    val rev_stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+    for (i <- rev_stack_arr.indices) {
+      assert(rev_stack_arr(i).length == 1)
+      assert(rev_stack_arr(i).top == 0)
+    }
+  }
+
+
+  test("Test revEval_stmt of ArrWithSize") {
+    val ast = interp.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr := [0,0,0,0,0,0,0,0,0,0];arr := [1,2,3,4,5,6,7,8,9,10]")
+    env = interp.eval(ast, env)
+    val stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+    for (i <- stack_arr.indices) {
+      assert(stack_arr(i).length == 4)
+      assert(stack_arr(i).top == i+1)
+    }
+    env = interp.revEval(interp.revAST(ast), env)
+    val rev_stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+    for (i <- rev_stack_arr.indices) {
+      assert(rev_stack_arr(i).length == 1)
+      assert(rev_stack_arr(i).top == 0)
+    }
+  }
+
+
+  test("Test revEval_stmt of UpdateArrIndex") {
+    val ast = interp.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr[0]:= 11")
+    env = interp.eval(ast, env)
+    val stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+    assert(stack_arr(0).length == 3)
+    assert(stack_arr(0).top == 11)
+    for (i <- 1 until stack_arr.length) {
+      assert(stack_arr(i).length == 2)
+      assert(stack_arr(i).top == i + 1)
+    }
+    env = interp.revEval(interp.revAST(ast), env)
+    val rev_stack_arr = env("arr").asInstanceOf[Array[mutable.Stack[Int]]]
+
+    for (i <- rev_stack_arr.indices) {
+      assert(rev_stack_arr(i).length == 1)
+      assert(rev_stack_arr(i).top == 0)
+    }
+  }
+
+  test("Test revEval_stmt of If-then-else when if true") {
+    val ast = interp.parse(if_true_prog)
+    val my_if = ast.filter(x => x.isInstanceOf[interp.If]).head
+    val my_if_id = my_if.asInstanceOf[interp.If].boolStack.id
+    val my_if_int = my_if_id.split("_")(1)
+    env = interp.eval(ast, env)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].length == 3)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].top == 9)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].length == 2)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].top == 100)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]].length == 2)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]] == stack(0, 1))
+
+    env = interp.revEval(interp.revAST(ast), env)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].length == 1)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].top == 0)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].length == 1)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].top == 0)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]].length == 1)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]] == stack(0))
+  }
+
+
+  test("Test revEval_stmt of If-then-else when if false") {
+    val ast = interp.parse(if_false_prog)
+    val my_if = ast.filter(x => x.isInstanceOf[interp.If]).head
+    val my_if_id = my_if.asInstanceOf[interp.If].boolStack.id
+    val my_if_int = my_if_id.split("_")(1)
+    env = interp.eval(ast, env)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].length == 2)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].top == 10)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].length == 3)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].top == 99)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]].length == 2)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]] == stack(0, 0))
+
+    env = interp.revEval(interp.revAST(ast), env)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].length == 1)
+    assert(env("x").asInstanceOf[mutable.Stack[Int]].top == 0)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].length == 1)
+    assert(env("y").asInstanceOf[mutable.Stack[Int]].top == 0)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]].length == 1)
+    assert(env(s"if_${my_if_int}_result").asInstanceOf[mutable.Stack[Int]] == stack(0))
+  }
+
 
   test("Test evaluation of blocks") {
     assert(interp.eval_bl(List(), env) == env)
@@ -169,6 +299,32 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assertThrows[java.lang.ArrayIndexOutOfBoundsException](interp.eval(interp.parse("i := arr[-1]"), env))
   }
 
+
+  test("Test stack_tops function") {
+    val ast = interp.parse(exampleProg1)
+    val my_while = ast.filter(x => x.isInstanceOf[interp.While]).head
+    val my_while_id = my_while.asInstanceOf[interp.While].counter.id
+    val my_while_int = my_while_id.split("_")(1)
+    env = interp.eval(ast)
+    env = interp.eval(interp.parse("arr := [1,2,3]"), env)
+
+    assert(interp.stack_tops(env) == s"Map(fact -> 6, n -> 0, W_${my_while_int}_k -> 3, arr -> Array[1, 2, 3])")
+  }
+
+
+  test("Test revEval function") {
+    val ast = interp.parse(exampleProg1)
+    val my_while = ast.filter(x => x.isInstanceOf[interp.While]).head
+    val my_while_id = my_while.asInstanceOf[interp.While].counter.id
+    val my_while_int = my_while_id.split("_")(1)
+    env = interp.eval(ast)
+    env = interp.revEval(interp.revAST(ast), env)
+    assert(interp.stack_tops(env) == s"Map(fact -> 0, n -> 0, W_${my_while_int}_k -> 0)")
+    val fact_stack = env("fact").asInstanceOf[mutable.Stack[Int]]
+    assert(fact_stack.length == 1)
+    val n_stack = env("n").asInstanceOf[mutable.Stack[Int]]
+    assert(n_stack.length == 1)
+  }
 
 
   def stack(numbers: Int*) : mutable.Stack[Int] = {

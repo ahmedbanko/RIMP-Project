@@ -10,8 +10,9 @@ class Parser extends Tokenizer {
 
   // constraint for the input
   type IsSeq[A] = A => Seq[_]
-
   type Tokens = Seq[Token]
+  type RVar = mutable.Stack[Int]
+  type RArray = Array[RVar]
 
   abstract class Parser[I: IsSeq, T] {
     def parse(in: I): Set[(T, I)]
@@ -21,8 +22,14 @@ class Parser extends Tokenizer {
            if tl.isEmpty) yield hd
   }
 
+
   case class Counter(id: String, count: Int = 0)
-  case class IfResult(id: String, result: mutable.Stack[Int] = mutable.Stack(0))
+
+  def stack(vars: Int*): RVar = {
+    mutable.Stack[Int](0).pushAll(vars)
+  }
+
+  case class IfResult(id: String, result: RVar=stack())
 
   var while_count: Int = -1
   var if_count: Int = -1
@@ -44,6 +51,7 @@ class Parser extends Tokenizer {
     if_count += 1
     if_count
   }
+
 
   // parser combinators
 
@@ -83,15 +91,6 @@ class Parser extends Tokenizer {
       case _ => Set()
     }
   }
-
-
-  case object StrParser extends Parser[Tokens, String] {
-    def parse(in: Tokens) = in match {
-      case T_STR(s) :: tail => Set((s, tail))
-      case _ => Set()
-    }
-  }
-
 
   case object CommaParser extends Parser[Tokens, String] {
     def parse(in: Tokens) = in match {

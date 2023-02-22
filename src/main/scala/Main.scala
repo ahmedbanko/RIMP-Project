@@ -140,8 +140,8 @@ object Main extends App {
   println(i.stack_tops(env))
   val revenv = i.revEval(rp, env)
   println(i.stack_tops(revenv))
-//  val reenv = i.revEval(rp, env)
-//  println(i.stack_top_map(reenv))
+
+  println(i.stack(1, 2))
 //// env("arr").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
 //// env("arr2").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
 ////  println(env)

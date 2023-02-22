@@ -18,7 +18,7 @@ class Parser extends Tokenizer {
     def parse(in: I): Set[(T, I)]
 
     def parse_all(in: I): Set[T] =
-      for ((hd, tl) <- parse(in);
+      for ((hd, tl) <- parse(in)
            if tl.isEmpty) yield hd
   }
 
@@ -58,7 +58,7 @@ class Parser extends Tokenizer {
   // sequence parser
   class SeqParser[I: IsSeq, T, S](p: => Parser[I, T],
                                   q: => Parser[I, S]) extends Parser[I, ~[T, S]] {
-    def parse(in: I) =
+    def parse(in: I): Set[(T ~ S, I)] =
       for ((hd1, tl1) <- p.parse(in);
            (hd2, tl2) <- q.parse(tl1)) yield (new ~(hd1, hd2), tl2)
   }
@@ -66,48 +66,48 @@ class Parser extends Tokenizer {
   // alternative parser
   class AltParser[I: IsSeq, T](p: => Parser[I, T],
                                q: => Parser[I, T]) extends Parser[I, T] {
-    def parse(in: I) = p.parse(in) ++ q.parse(in)
+    def parse(in: I): Set[(T, I)] = p.parse(in) ++ q.parse(in)
   }
 
   // map parser
   class MapParser[I: IsSeq, T, S](p: => Parser[I, T],
                                   f: T => S) extends Parser[I, S] {
-    def parse(in: I) = for ((hd, tl) <- p.parse(in)) yield (f(hd), tl)
+    def parse(in: I): Set[(S, I)] = for ((hd, tl) <- p.parse(in)) yield (f(hd), tl)
   }
 
   case class TokenParser(sin: String) extends Parser[Tokens, Token] {
     def parse(in: Tokens): Set[(Token, Tokens)] = in match {
-      case T_LBRACK :: tail if (sin == "(") => Set((T_LBRACK, tail))
-      case T_RBRACK :: tail if (sin == ")") => Set((T_RBRACK, tail))
-      case T_LSQRB :: tail if (sin == "[") => Set((T_LSQRB, tail))
-      case T_RSQRB :: tail if (sin == "]") => Set((T_RSQRB, tail))
-      case T_LPAREN :: tail if (sin == "{") => Set((T_LPAREN, tail))
-      case T_RPAREN :: tail if (sin == "}") => Set((T_RPAREN, tail))
-      case T_STR(s) :: tail if (s == sin) => Set((T_STR(s), tail))
-      case T_ID(s) :: tail if (s == sin) => Set((T_ID(s), tail))
-      case T_OP(s) :: tail if (s == sin) => Set((T_OP(s), tail))
-      case T_NUM(n) :: tail if (n.toString == sin) => Set((T_NUM(n), tail))
-      case T_KWD(s) :: tail if (s == sin) => Set((T_KWD(s), tail))
+      case T_LBRACK :: tail if sin == "(" => Set((T_LBRACK, tail))
+      case T_RBRACK :: tail if sin == ")" => Set((T_RBRACK, tail))
+      case T_LSQRB :: tail if sin == "[" => Set((T_LSQRB, tail))
+      case T_RSQRB :: tail if sin == "]" => Set((T_RSQRB, tail))
+      case T_LPAREN :: tail if sin == "{" => Set((T_LPAREN, tail))
+      case T_RPAREN :: tail if sin == "}" => Set((T_RPAREN, tail))
+      case T_STR(s) :: tail if s == sin => Set((T_STR(s), tail))
+      case T_ID(s) :: tail if s == sin => Set((T_ID(s), tail))
+      case T_OP(s) :: tail if s == sin => Set((T_OP(s), tail))
+      case T_NUM(n) :: tail if n.toString == sin => Set((T_NUM(n), tail))
+      case T_KWD(s) :: tail if s == sin => Set((T_KWD(s), tail))
       case _ => Set()
     }
   }
 
   case object CommaParser extends Parser[Tokens, String] {
-    def parse(in: Tokens) = in match {
+    def parse(in: Tokens): Set[(String, Tokens)] = in match {
       case T_COMMA :: tail => Set((",", tail))
       case _ => Set()
     }
   }
 
   case object SEMIParser extends Parser[Tokens, String] {
-    def parse(in: Tokens) = in match {
+    def parse(in: Tokens): Set[(String, Tokens)] = in match {
       case T_SEMI :: tail => Set((";", tail))
       case _ => Set()
     }
   }
 
   case object BarParser extends Parser[Tokens, String] {
-    def parse(in: Tokens) = in match {
+    def parse(in: Tokens): Set[(String, Tokens)] = in match {
       case T_BAR :: tail => Set(("|", tail))
       case _ => Set()
     }
@@ -115,7 +115,7 @@ class Parser extends Tokenizer {
 
 
   case object IdParser extends Parser[Tokens, String] {
-    def parse(in: Tokens) = in match {
+    def parse(in: Tokens): Set[(String, Tokens)] = in match {
       case T_ID(s) :: tail => Set((s, tail))
       case _ => Set()
     }
@@ -123,7 +123,7 @@ class Parser extends Tokenizer {
 
 
   case object NumParser extends Parser[Tokens, Int] {
-    def parse(in: Tokens) = in match {
+    def parse(in: Tokens): Set[(Int, Tokens)] = in match {
       case T_NUM(n) :: tail => Set((n, tail))
       case _ => Set()
     }
@@ -131,7 +131,7 @@ class Parser extends Tokenizer {
 
 
   implicit def parser_interpolation(sc: StringContext) = new {
-    def p(args: Any*) = TokenParser(sc.s(args: _*))
+    def p(args: Any*): TokenParser = TokenParser(sc.s(args: _*))
   }
 
   // more convenient syntax for parser combinators
@@ -205,15 +205,15 @@ class Parser extends Tokenizer {
       (AExp ~ p">" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">", x, z) } ||
       (AExp ~ p">=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">=", x, z) } ||
       (AExp ~ p"<=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop("<=", x, z) } ||
-      (p"true").map[BExp] { _ => True } ||
-      (p"false").map[BExp] { _ => False } ||
+      p"true".map[BExp] { _ => True } ||
+      p"false".map[BExp] { _ => False } ||
       (p"~" ~ BExp).map[BExp] { case _ ~ x => Not(x) } ||
       (p"(" ~ BExp ~ p")").map[BExp] { case _ ~ x ~ _ => x }
 
 
   // a single statement
   lazy val Stmt: Parser[Tokens, Stmt] =
-    (p"skip").map[Stmt] { _ => Skip } ||
+    p"skip".map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
       (IdParser ~ p":=" ~ ArrBlock).map { case id ~ _ ~ values => AssignArr(id, values) } ||
       (IdParser ~ p":=" ~ BarParser ~ AExp ~ BarParser).map {
@@ -242,7 +242,7 @@ class Parser extends Tokenizer {
     (p"{" ~ Stmts ~ p"}").map { case _ ~ y ~ _ => y } ||
       Stmt.map(s => List(s))
 
-  // helper function to parse programs (filters whitespases and comments)
+  // helper function to parse programs (filters whitespaces and comments)
   def parse(program: String): List[Stmt]  = {
     Stmts.parse_all(tokenize(program)).head
   }
@@ -256,14 +256,12 @@ class Parser extends Tokenizer {
 
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2, if_res) => {
+    case If(a, bl1, bl2, if_res) =>
       val ifId = if_res.id.split("_")(1)
-      s"${if_res.id} := ${if_res.result};\nif-$ifId ${stmt2String(a)} then {\n${(bl1.map(x => stmt2String(x)).mkString(";\n"))}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
-    }
-    case While(b, bl, counter) => {
+      s"${if_res.id} := ${if_res.result};\nif-$ifId ${stmt2String(a)} then {\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case While(b, bl, counter) =>
       val whileId = counter.id.split("_")(1)
       s"${counter.id} := ${counter.count};\nwhile-$whileId ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
-    }
     case Assign(s, a) => s"$s := ${stmt2String(a)}"
     case AssignArr(id, values) => s"$id := ${values.mkString("[", ", ", "]")}"
     case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"
@@ -282,25 +280,22 @@ class Parser extends Tokenizer {
 
   private def stmts2String(ast: List[Stmt], output: List[String] = List()) : List[String] = ast match {
     case Nil => output
-    case s::rest => {
+    case s::rest =>
       if(rest.isEmpty) {
         stmt2String(s)::stmts2String(rest)
       }else {
         s"${stmt2String(s)};\n"::stmts2String(rest)
       }
-    }
   }
 
   private def stmt2RevStr(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2, if_res) => {
+    case If(_, bl1, bl2, if_res) =>
       val ifId = if_res.id.split("_")(1)
-      s"if-${ifId} (!${if_res.id}) then {\n${(bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n"))}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
-    }
-    case While(b, bl, counter) => {
+      s"if-$ifId (!${if_res.id}) then {\n${bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+    case While(_, bl, counter) =>
       val whileId = counter.id.split("_")(1)
       s"while-$whileId (!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"
-    }
     case Assign(s, a) => s"$s =: ${stmt2RevStr(a)}"
     case AssignArr(id, values) => s"$id =: ${values.mkString("[", ", ", "]")}"
     case ArrayWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
@@ -319,23 +314,20 @@ class Parser extends Tokenizer {
 
   private def stmts2RevStr(ast: List[Stmt], output: List[String] = List()): List[String] = ast match {
     case Nil => output
-    case s :: rest => {
+    case s :: rest =>
       if (rest.isEmpty) {
         stmt2RevStr(s) :: stmts2RevStr(rest)
       } else {
         s"${stmt2RevStr(s)};\n" :: stmts2RevStr(rest)
       }
-    }
   }
 
   private def revStmt(stmt: Stmt) = stmt match {
-    case If (a, bl1, bl2, boolStack) => {
+    case If (_, bl1, bl2, boolStack) =>
       If(Bop("=", Var(boolStack.id), Num(1)), revAST(bl1), revAST(bl2), boolStack)
-    }
-    case While(b, bl, counter) => {
-        While(Bop(">", Var(counter.id), Num(0)), revAST(bl), counter)
-    }
-//    case AssignThread (id, bl) =>{
+    case While(_, bl, counter) =>
+      While(Bop(">", Var(counter.id), Num(0)), revAST(bl), counter)
+    //    case AssignThread (id, bl) =>{
 //
 //    }
     case _ => stmt

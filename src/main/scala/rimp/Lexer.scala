@@ -69,9 +69,9 @@ class Lexer {
     case RECD(_, r1) => nullable(r1)
 
     case NTIMES(r, n) => if (n == 0) true else nullable(r)
-    case RANGE(cs) => false
+    case RANGE(_) => false
     case PLUS(r) => nullable(r)
-    case OPTIONAL(r) => true
+    case OPTIONAL(_) => true
   }
 
   def der(c: Char, r: Rexp): Rexp = r match {
@@ -113,7 +113,7 @@ class Lexer {
   // used for tokenising a string
   def env(v: Val): List[(String, String)] = v match {
     case Empty => Nil
-    case Chr(c) => Nil
+    case Chr(_) => Nil
     case Left(v) => env(v)
     case Right(v) => env(v)
     case Sequ(v1, v2) => env(v1) ::: env(v2)
@@ -135,54 +135,54 @@ class Lexer {
     case ALT(r1, r2) =>
       if (nullable(r1)) Left(mkeps(r1)) else Right(mkeps(r2))
     case SEQ(r1, r2) => Sequ(mkeps(r1), mkeps(r2))
-    case STAR(r) => Stars(Nil)
+    case STAR(_) => Stars(Nil)
     case RECD(x, r) => Rec(x, mkeps(r))
     case PLUS(r) => Stars(List(mkeps(r)))
-    case OPTIONAL(r) => Stars(Nil)
+    case OPTIONAL(_) => Stars(Nil)
     case NTIMES(r, n) => Stars(List.fill(n)(mkeps(r)))
   }
 
   def inj(r: Rexp, c: Char, v: Val): Val = (r, v) match {
     case (STAR(r), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
-    case (SEQ(r1, r2), Sequ(v1, v2)) => Sequ(inj(r1, c, v1), v2)
-    case (SEQ(r1, r2), Left(Sequ(v1, v2))) => Sequ(inj(r1, c, v1), v2)
+    case (SEQ(r1, _), Sequ(v1, v2)) => Sequ(inj(r1, c, v1), v2)
+    case (SEQ(r1, _), Left(Sequ(v1, v2))) => Sequ(inj(r1, c, v1), v2)
     case (SEQ(r1, r2), Right(v2)) => Sequ(mkeps(r1), inj(r2, c, v2))
-    case (ALT(r1, r2), Left(v1)) => Left(inj(r1, c, v1))
-    case (ALT(r1, r2), Right(v2)) => Right(inj(r2, c, v2))
-    case (CHAR(d), Empty) => Chr(c)
+    case (ALT(r1, _), Left(v1)) => Left(inj(r1, c, v1))
+    case (ALT(_, r2), Right(v2)) => Right(inj(r2, c, v2))
+    case (CHAR(_), Empty) => Chr(c)
     case (RECD(x, r1), _) => Rec(x, inj(r1, c, v))
 
     case (RANGE(_), Empty) => Chr(c)
     case (PLUS(r), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
     case (OPTIONAL(r), v) => Stars(inj(r, c, v) :: Nil)
-    case (NTIMES(r, n), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
+    case (NTIMES(r, _), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
   }
 
 
   // some "rectification" functions for simplification
   def F_ID(v: Val): Val = v
-  def F_RIGHT(f: Val => Val) = (v: Val) => Right(f(v))
-  def F_LEFT(f: Val => Val) = (v: Val) => Left(f(v))
-  def F_ALT(f1: Val => Val, f2: Val => Val) = (v: Val) => v match {
+  def F_RIGHT(f: Val => Val): Val => Right = (v: Val) => Right(f(v))
+  def F_LEFT(f: Val => Val): Val => Left = (v: Val) => Left(f(v))
+  def F_ALT(f1: Val => Val, f2: Val => Val): Val => Val = (v: Val) => v match {
     case Right(v) => Right(f2(v))
     case Left(v) => Left(f1(v))
   }
 
-  def F_SEQ(f1: Val => Val, f2: Val => Val) = (v: Val) => v match {
+  def F_SEQ(f1: Val => Val, f2: Val => Val): Val => Sequ = {
     case Sequ(v1, v2) => Sequ(f1(v1), f2(v2))
   }
 
-  def F_SEQ_Empty1(f1: Val => Val, f2: Val => Val) =
+  def F_SEQ_Empty1(f1: Val => Val, f2: Val => Val): Val => Sequ =
     (v: Val) => Sequ(f1(Empty), f2(v))
 
-  def F_SEQ_Empty2(f1: Val => Val, f2: Val => Val) =
+  def F_SEQ_Empty2(f1: Val => Val, f2: Val => Val): Val => Sequ =
     (v: Val) => Sequ(f1(v), f2(Empty))
 
   def F_ERROR(v: Val): Val = throw new Exception("error")
 
   // simplification
   def simp(r: Rexp): (Rexp, Val => Val) = r match {
-    case ALT(r1, r2) => {
+    case ALT(r1, r2) =>
       val (r1s, f1s) = simp(r1)
       val (r2s, f2s) = simp(r2)
       (r1s, r2s) match {
@@ -191,8 +191,7 @@ class Lexer {
         case _ => if (r1s == r2s) (r1s, F_LEFT(f1s))
         else (ALT(r1s, r2s), F_ALT(f1s, f2s))
       }
-    }
-    case SEQ(r1, r2) => {
+    case SEQ(r1, r2) =>
       val (r1s, f1s) = simp(r1)
       val (r2s, f2s) = simp(r2)
       (r1s, r2s) match {
@@ -202,7 +201,6 @@ class Lexer {
         case (_, ONE) => (r1s, F_SEQ_Empty2(f1s, f2s))
         case _ => (SEQ(r1s, r2s), F_SEQ(f1s, f2s))
       }
-    }
     case r => (r, F_ID)
   }
 
@@ -211,10 +209,9 @@ class Lexer {
     case Nil => if (nullable(r)) mkeps(r) else {
       throw new Exception("lexing error")
     }
-    case c :: cs => {
+    case c :: cs =>
       val (r_simp, f_simp) = simp(der(c, r))
       inj(r, c, f_simp(lex_simp(r_simp, cs)))
-    }
   }
 
   def lexing_simp(r: Rexp, s: String) =
@@ -241,7 +238,7 @@ class Lexer {
   val ID: Rexp = LETTER ~ ("_" | LETTER | DIGIT).%
   val NUM: Rexp = "0" | OPTIONAL(CHAR('-')) ~ (RANGE("123456789".toSet) ~ STAR(DIGIT))
 
-  val RIMP_REGS = (("keyword" $ KEYWORD) |
+  val RIMP_REGS: STAR = (("keyword" $ KEYWORD) |
     ("id" $ ID) |
     ("operation" $ OP) |
     ("number" $ NUM) |

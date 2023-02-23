@@ -80,10 +80,12 @@ class Interpreter extends Parser {
         }
       case While(b, bl, counter) =>
         if (eval_bexp(b, env)) {
-          eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env + (counter.id -> (counter.count+1))))
+          eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env))
         }
         else {
-          env
+          val c_stack = env.getOrElse(counter.id, stack()).asInstanceOf[RVar]
+
+          env + (counter.id -> c_stack.push(counter.count))
         }
     }
 
@@ -136,17 +138,18 @@ class Interpreter extends Parser {
 
       case If(_, bl1, bl2, if_res) =>
         val stack = env(if_res.id).asInstanceOf[RVar]
-        if (stack.pop() ==  1) {
+        if (stack.pop() == 1) {
           revEval(bl1, env + (if_res.id -> stack))
         } else {
           revEval(bl2, env + (if_res.id -> stack))
         }
       case While(b, bl, counter) =>
-        val count = env(counter.id).asInstanceOf[Int]
-        if (count > 0) {
-          revEval_stmt(While(b, bl, Counter(counter.id, count - 1)), revEval(bl, env + (counter.id -> (count - 1))))
+        val count = env(counter.id).asInstanceOf[RVar]
+        if (count.top > 0) {
+          revEval_stmt(While(b, bl, Counter(counter.id, counter.count-1)), revEval(bl, env))
         }
         else {
+          count.pop
           env
         }
     }

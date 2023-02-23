@@ -10,6 +10,7 @@ class Parser extends Tokenizer {
 
   // constraint for the input
   type IsSeq[A] = A => Seq[_]
+
   type Tokens = Seq[Token]
   type RVar = mutable.Stack[Int]
   type RArray = Array[RVar]
@@ -23,35 +24,22 @@ class Parser extends Tokenizer {
   }
 
 
+
   case class Counter(id: String, count: Int = 0)
-
-  def stack(vars: Int*): RVar = {
-    mutable.Stack[Int](0).pushAll(vars)
-  }
-
   case class IfResult(id: String, result: RVar=stack())
 
   var while_count: Int = -1
   var if_count: Int = -1
 
-  def whileID(c: Int): String = {
-    s"W_${c}_k"
-  }
-
-  def ifID(c: Int): String = {
-    s"if_${c}_result"
-  }
-
-  def nxtWCount(): Int = {
+  def whileID(): String = {
     while_count += 1
-    while_count
+    s"_k$while_count"
   }
 
-  def nxtIfCount(): Int = {
+  def ifID(): String = {
     if_count += 1
-    if_count
+    s"_if$if_count"
   }
-
 
   // parser combinators
 
@@ -222,8 +210,8 @@ class Parser extends Tokenizer {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
-        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, IfResult(ifID(nxtWCount()))) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(whileID(nxtIfCount())))} ||
+        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, IfResult(ifID())) } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(whileID()))} ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
@@ -344,5 +332,10 @@ class Parser extends Tokenizer {
 
   def ast2Code(ast: List[Stmt]): String = {
     stmts2String(ast).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
+  }
+
+
+  def stack(vars: Int*): RVar = {
+    mutable.Stack[Int](0).pushAll(vars)
   }
 }

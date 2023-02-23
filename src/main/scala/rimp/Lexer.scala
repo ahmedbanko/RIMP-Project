@@ -222,10 +222,10 @@ class Lexer {
   val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~" | "?"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString
   val LETTER: Rexp = RANGE(alphabet.toSet)
-  val SYM: Rexp = RANGE((alphabet ++ """._><=;,\:""").toSet)
+//  val SYM: Rexp = RANGE((alphabet ++ """._><=;,\:""").toSet)
   val WHITESPACE: Rexp = PLUS(" " | "\n" | "\t" | "\r")
   val DIGIT: Rexp = RANGE("0123456789".toSet)
-  val STRING: Rexp = "\"" ~ (SYM | WHITESPACE | DIGIT).% ~ "\""
+//  val STRING: Rexp = "\"" ~ (SYM | WHITESPACE | DIGIT).% ~ "\""
   val RSQRB: Rexp = "]"
   val LSQRB: Rexp = "["
   val RPAREN: Rexp = "}"
@@ -245,12 +245,12 @@ class Lexer {
     ("semicolon" $ SEMI) |
     ("comma" $ COMMA) |
     ("bar" $ BAR) |
-    ("string" $ STRING) |
+//    ("string" $ STRING) |
     ("parenthesis" $ (LPAREN | RPAREN)) |
     ("brackets" $ (RBRACK | LBRACK)) |
     ("sqr_brackets" $ (RSQRB | LSQRB)) |
     ("whitespace" $ WHITESPACE) |
-    ("symbol" $ SYM) |
+//    ("symbol" $ SYM) |
     ("digit" $ DIGIT)).%
 
 

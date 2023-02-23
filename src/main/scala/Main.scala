@@ -129,7 +129,7 @@ object Main extends App {
           skip
       }
       """
-  val p = i.parse(if_prog)
+  val p = i.parse(exampleProg3)
 //  p.foreach(println)
 //  println("------------")
   val rp = i.revAST(p)
@@ -138,22 +138,17 @@ object Main extends App {
 //  println(i.revAst2Code(p))
   val env = i.eval(p)
   println(i.stack_tops(env))
+//  println(rp)
   val revenv = i.revEval(rp, env)
   println(i.stack_tops(revenv))
+//
+//  println(i.stack(1, 2))
 
-  println(i.stack(1, 2))
-//// env("arr").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
-//// env("arr2").asInstanceOf[Array[mutable.Stack[Int]]].foreach(x => println(x.mkString(", ")))
-////  println(env)
-////  println(i.print_top(env))
+//  println(i.lexing_simp(i.RIMP_REGS, "n := 10"))
   println("done")
 //
 //  //  i.evalBySteps(p, Map())
 
-
-  """
-     Map(fact -> 6, n -> 0, W_1_k -> 3)
-    """.stripMargin
 
 
 

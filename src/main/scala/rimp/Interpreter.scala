@@ -108,6 +108,11 @@ class Interpreter extends Parser {
   }
 
 
+  def newStack(c_stack: RVar): RVar = {
+    c_stack.pop()
+    c_stack
+  }
+
   def revEval_stmt(s: Stmt, env: Env): Env =
     s match {
       case Skip => env
@@ -144,14 +149,15 @@ class Interpreter extends Parser {
           revEval(bl2, env + (if_res.id -> stack))
         }
       case While(b, bl, counter) =>
-        val count = env(counter.id).asInstanceOf[RVar]
-        if (count.top > 0) {
-          revEval_stmt(While(b, bl, Counter(counter.id, counter.count-1)), revEval(bl, env))
+        val c_stack = env(counter.id).asInstanceOf[RVar]
+        if(c_stack.length > 1) {
+          var c = c_stack.pop
+          while (c > 0) {
+            revEval_stmt(While(b, bl, counter), revEval(bl, env))
+            c -= 1
+          }
         }
-        else {
-          count.pop
-          env
-        }
+        env
     }
 
   def revEval(bl: Block, env: Env): Env = bl match {

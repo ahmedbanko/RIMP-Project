@@ -133,7 +133,7 @@ object Main extends App {
 //  p.foreach(println)
 //  println("------------")
   val rp = i.revAST(p)
-//  println(i.ast2Code(p))
+  println(i.ast2Code(p))
 //  println("------------")
 //  println(i.revAst2Code(p))
   val env = i.eval(p)

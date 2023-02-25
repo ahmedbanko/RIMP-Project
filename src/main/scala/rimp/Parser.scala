@@ -15,11 +15,8 @@ class Parser extends Tokenizer {
   type RVar = mutable.Stack[Int]
   type RArray = Array[RVar]
 
-  case class Counter(id: String, count: Int = 0)
-  case class IfResult(id: String, result: RVar=stack(0))
-
-  var while_count: Int = -1
-  var if_count: Int = -1
+  var while_count: Int = 0
+  var if_count: Int = 0
 
   def whileID(): String = {
     while_count += 1
@@ -30,6 +27,11 @@ class Parser extends Tokenizer {
     if_count += 1
     s"_if$if_count"
   }
+
+
+  case class Counter(id: String="NONE_while", count: Int = 0)
+
+  case class IfResult(id: String="NONE_if", result: RVar = stack(0))
 
 
   abstract class Parser[I: IsSeq, T] {
@@ -209,8 +211,8 @@ class Parser extends Tokenizer {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
-        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, IfResult(ifID())) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter(whileID()))} ||
+        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, IfResult()) } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter())} ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
@@ -226,9 +228,18 @@ class Parser extends Tokenizer {
     (p"{" ~ Stmts ~ p"}").map { case _ ~ y ~ _ => y } ||
       Stmt.map(s => List(s))
 
+  def injectIds(b: Block): List[Stmt] = {
+    b.map {
+      case w: While => w.copy(b = w.b, counter = Counter(id = whileID()), bl = injectIds(w.bl))
+      case i: If => i.copy(a = i.a, boolStack = IfResult(id = ifID()), bl1 = injectIds(i.bl1), bl2 = injectIds(i.bl2))
+      case other => other
+    }
+  }
+
   // helper function to parse programs (filters whitespaces and comments)
   def parse(program: String): List[Stmt]  = {
-    Stmts.parse_all(tokenize(program)).head
+    val p = Stmts.parse_all(tokenize(program)).head
+    injectIds(p)
   }
 
 

@@ -116,32 +116,18 @@ object Main extends App {
     """n := 0;
        l := 5;
        arr := |!l|;
-       while(!l > 0) do {
-            i := !l - 1;
-            arr[!i] := !n;
+       while(!l + -1 > 0) do {
+            arr[!l - 1] := !n;
             l := !l - 1;
             n := !n + 1
-       };
-       swapped := 1;
-       while(!swapped = 1) do {
-            swapped := 0;
-            j := !n - 1;
-            tmp1 := arr[!j];
-            tmp2 := arr[!n];
-          if(!tmp1 > !tmp2) then {
-               arr[!j] := !tmp2;
-               arr[!n] := !tmp1;
-               swapped := 1
-          }else {
-            skip
-          }
        }
       """.stripMargin
 
   val reverse_arr_prog =
     """arr := [1, 2, 3, 4, 5];
+       arr_len := 5;
        left := 0;
-       right := 4;
+       right := !arr_len - 1;
        while(!left < !right) do {
           tmp_left := arr[!left];
           tmp_right := arr[!right];
@@ -151,7 +137,7 @@ object Main extends App {
           right := !right - 1
        }
       """
-  val p = i.parse(reverse_arr_prog)
+  val p = i.parse(sort_arr_prog)
 //  p.foreach(println)
 //  println("------------")
   val rp = i.revAST(p)

@@ -97,8 +97,9 @@ class Fixtures {
 
   val reverse_arr_prog =
     """arr := [1, 2, 3, 4, 5];
+      arr_len := 5;
       left := 0;
-      right := 4;
+      right := !arr_len - 1;
       while(!left < !right) do {
          tmp_left := arr[!left];
          tmp_right := arr[!right];

@@ -10,24 +10,6 @@ object Main extends App {
        arr := |1|;
        arr := |2|;
        arr := |3|"""
-//  val expected = List(i.AssignThread("t", List(i.If(i.Bop("<",i.Var("a"),i.Var("b")),List(i.Skip),List(i.Assign("a",i.Aop("+",i.Aop("*",i.Var("a"),i.Var("b")),i.Num(1))))))))
-//  val parsed = i.parse(prog)
-//  val (env, bStack) = i.eval(parsed)
-//  println(env("a"))
-//  println(env("arr").asInstanceOf[Array[Int]].mkString("Array(", ", ", ")"))
-//  println(bStack)
-//  println(parsed)
-//  println(i.rev(parsed))
-////  println(bStack)
-//  val backBlock : i.Block = bStack.map(e => e._2).toList
-//  val (env2, bStack2) = i.eval(backBlock, (Map().empty, new mutable.Stack))
-//  println(env2("a"))
-//  println(env2("arr").asInstanceOf[Array[Int]].mkString("Array(", ", ", ")"))
-//  println(bStack2)
-//  println(i.backStack)
-//  val (env2, bStack2) = i.revEval((env, bStack))
-//  println(env2("a"))
-//  println(env2("arr").asInstanceOf[Array[Int]].mkString("Array(", ", ", ")"))
 
   val ifProg =
     """x := 1;
@@ -129,16 +111,56 @@ object Main extends App {
           skip
       }
       """
-  val p = i.parse(exampleProg3)
+
+  val sort_arr_prog =
+    """n := 0;
+       l := 5;
+       arr := |!l|;
+       while(!l > 0) do {
+            i := !l - 1;
+            arr[!i] := !n;
+            l := !l - 1;
+            n := !n + 1
+       };
+       swapped := 1;
+       while(!swapped = 1) do {
+            swapped := 0;
+            j := !n - 1;
+            tmp1 := arr[!j];
+            tmp2 := arr[!n];
+          if(!tmp1 > !tmp2) then {
+               arr[!j] := !tmp2;
+               arr[!n] := !tmp1;
+               swapped := 1
+          }else {
+            skip
+          }
+       }
+      """.stripMargin
+
+  val reverse_arr_prog =
+    """arr := [1, 2, 3, 4, 5];
+       left := 0;
+       right := 4;
+       while(!left < !right) do {
+          tmp_left := arr[!left];
+          tmp_right := arr[!right];
+          arr[!right] := !tmp_left;
+           arr[!left] := !tmp_right;
+          left := !left + 1;
+          right := !right - 1
+       }
+      """
+  val p = i.parse(reverse_arr_prog)
 //  p.foreach(println)
 //  println("------------")
   val rp = i.revAST(p)
-  println(i.ast2Code(p))
-//  println("------------")
-//  println(i.revAst2Code(p))
+//  println(i.ast2Code(p))
+////  println("------------")
+////  println(i.revAst2Code(p))
   val env = i.eval(p)
   println(i.stack_tops(env))
-//  println(rp)
+////  println(rp)
   val revenv = i.revEval(rp, env)
   println(i.stack_tops(revenv))
 //

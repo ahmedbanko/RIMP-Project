@@ -324,6 +324,18 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("_k1").asInstanceOf[i.RVar] == i.stack(0, 10))
   }
 
+  test("Test forward evaluation of pre-defined reverse_arr_prog") {
+    val ast = i.parse(fixtures.reverse_arr_prog)
+    val env = i.eval(ast)
+    val arr = env("arr").asInstanceOf[i.RArray]
+    assert(arr(0) == i.stack(0, 1, 5))
+    assert(arr(1) == i.stack(0, 2, 4))
+    assert(arr(2) == i.stack(0,    3))
+    assert(arr(3) == i.stack(0, 4, 2))
+    assert(arr(4) == i.stack(0, 5, 1))
+    assert(env("_k1").asInstanceOf[i.RVar] == i.stack(0, 2))
+  }
+
   test("Test backward evaluation of pre-defined programs") {
     for(p <- fixtures.allExamples){
       // Forward evaluation

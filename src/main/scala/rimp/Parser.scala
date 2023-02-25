@@ -174,7 +174,7 @@ class Parser extends Tokenizer {
   lazy val Fa: Parser[Tokens, AExp] =
     (p"(" ~ AExp ~ p")").map { case _ ~ y ~ _ => y } ||
       (IdParser ~ p"[" ~ AExp ~ p"]").map { case id ~ _ ~ index ~ _ => ArrayVar(id, index) } ||
-      (p"!" ~ IdParser).map { case _ ~ x => Var(x) } ||
+      (p"!" ~ IdParser).map[AExp]{ case _ ~ x => Var(x) } ||
       NumParser.map(Num)
 
   lazy val ArrBlock: Parser[Tokens, ArrBlock] =
@@ -204,10 +204,10 @@ class Parser extends Tokenizer {
   lazy val Stmt: Parser[Tokens, Stmt] =
     p"skip".map[Stmt] { _ => Skip } ||
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
-      (IdParser ~ p":=" ~ ArrBlock).map { case id ~ _ ~ values => AssignArr(id, values) } ||
-      (IdParser ~ p":=" ~ BarParser ~ AExp ~ BarParser).map {
+      (IdParser ~ p":=" ~ ArrBlock).map[Stmt] { case id ~ _ ~ values => AssignArr(id, values) } ||
+      (IdParser ~ p":=" ~ BarParser ~ AExp ~ BarParser).map[Stmt] {
         case id ~ _ ~ _ ~ size ~ _  => ArrayWithSize(id, size)} ||
-      (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map {
+      (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map[Stmt] {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)

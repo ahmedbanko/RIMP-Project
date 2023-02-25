@@ -95,5 +95,20 @@ class Fixtures {
       """
 
 
-  val allExamples: List[String] = List(EX1, EX2, EX3, EX4, EX5, arrProg1, arrProg2, if_true_prog, if_false_prog)
+  val reverse_arr_prog =
+    """arr := [1, 2, 3, 4, 5];
+      left := 0;
+      right := 4;
+      while(!left < !right) do {
+         tmp_left := arr[!left];
+         tmp_right := arr[!right];
+         arr[!right] := !tmp_left;
+          arr[!left] := !tmp_right;
+         left := !left + 1;
+         right := !right - 1
+      }
+     """
+
+
+  val allExamples: List[String] = List(EX1, EX2, EX3, EX4, EX5, arrProg1, arrProg2, if_true_prog, if_false_prog, reverse_arr_prog)
 }

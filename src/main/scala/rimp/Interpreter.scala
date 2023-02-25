@@ -50,16 +50,16 @@ class Interpreter extends Parser {
     s match {
       case Skip => env
       case Assign(x, a) =>
-        val old_stack = env.getOrElse(x, stack())
+        val old_stack = env.getOrElse(x, stack(0))
         env + (x -> old_stack.asInstanceOf[RVar].push(eval_aexp(a, env)))
       case AssignArr(id, values) =>
-        val old_array = env.getOrElse(id, Array.fill(values.length)(stack())).asInstanceOf[RArray]
+        val old_array = env.getOrElse(id, Array.fill(values.length)(stack(0))).asInstanceOf[RArray]
         for ((arr, i) <- old_array.zipWithIndex) {
           arr.push(eval_aexp(values(i), env))
         }
         env + (id -> old_array)
       case ArrayWithSize(id, size) =>
-        val new_array = Array.fill(eval_aexp(size, env))(stack())
+        val new_array = Array.fill(eval_aexp(size, env))(stack(0))
         env + (id -> new_array)
       case UpdateArrIndex(id, index, newVal) =>
         val newVal_eval = eval_aexp(newVal, env)
@@ -83,7 +83,7 @@ class Interpreter extends Parser {
           eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env))
         }
         else {
-          val c_stack = env.getOrElse(counter.id, stack()).asInstanceOf[RVar]
+          val c_stack = env.getOrElse(counter.id, stack(0)).asInstanceOf[RVar]
 
           env + (counter.id -> c_stack.push(counter.count))
         }
@@ -105,12 +105,6 @@ class Interpreter extends Parser {
           s"$key -> Array[${s_l.map(s => s.top).mkString(", ")}]"
       }
     }.mkString("Map(", ", ", ")")
-  }
-
-
-  def newStack(c_stack: RVar): RVar = {
-    c_stack.pop()
-    c_stack
   }
 
   def revEval_stmt(s: Stmt, env: Env): Env =

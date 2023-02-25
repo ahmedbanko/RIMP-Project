@@ -15,18 +15,8 @@ class Parser extends Tokenizer {
   type RVar = mutable.Stack[Int]
   type RArray = Array[RVar]
 
-  abstract class Parser[I: IsSeq, T] {
-    def parse(in: I): Set[(T, I)]
-
-    def parse_all(in: I): Set[T] =
-      for ((hd, tl) <- parse(in)
-           if tl.isEmpty) yield hd
-  }
-
-
-
   case class Counter(id: String, count: Int = 0)
-  case class IfResult(id: String, result: RVar=stack())
+  case class IfResult(id: String, result: RVar=stack(0))
 
   var while_count: Int = -1
   var if_count: Int = -1
@@ -39,6 +29,15 @@ class Parser extends Tokenizer {
   def ifID(): String = {
     if_count += 1
     s"_if$if_count"
+  }
+
+
+  abstract class Parser[I: IsSeq, T] {
+    def parse(in: I): Set[(T, I)]
+
+    def parse_all(in: I): Set[T] =
+      for ((hd, tl) <- parse(in)
+           if tl.isEmpty) yield hd
   }
 
   // parser combinators
@@ -216,9 +215,6 @@ class Parser extends Tokenizer {
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
 
-  //  ArrBlock.map(ArrVal)
-
-
   // statements
   lazy val Stmts: Parser[Tokens, Block] =
     (Stmt ~ SEMIParser ~ Stmts).map[Block] { case x ~ _ ~ z => x :: z } ||
@@ -235,12 +231,6 @@ class Parser extends Tokenizer {
     Stmts.parse_all(tokenize(program)).head
   }
 
-
-
-//
-//  def rev(stmt: Stmt): List[String] = stmt match {
-//    case
-//  }
 
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
@@ -336,6 +326,6 @@ class Parser extends Tokenizer {
 
 
   def stack(vars: Int*): RVar = {
-    mutable.Stack[Int](0).pushAll(vars)
+    mutable.Stack[Int]().pushAll(vars)
   }
 }

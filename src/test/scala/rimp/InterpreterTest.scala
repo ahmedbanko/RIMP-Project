@@ -34,10 +34,10 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test evaluation of arithmatic expressions") {
     assert(interp.eval_aexp(interp.Num(1), env) == 1)
     assertThrows[java.util.NoSuchElementException](interp.eval_aexp(interp.Var("x"), env))
-    env = env + ("x" -> interp.stack(10))
+    env = env + ("x" -> interp.stack(0, 10))
     assert(interp.eval_aexp(interp.Var("x"), env) == 10)
     assertThrows[java.util.NoSuchElementException](interp.eval_aexp(interp.ArrayVar("arr", interp.Num(0)), env) == 1)
-    env = env + ("arr" -> Array(interp.stack(0,1),interp.stack(0,2),interp.stack(0,3)))
+    env = env + ("arr" -> Array(interp.stack(0, 0,1),interp.stack(0, 0,2),interp.stack(0, 0,3)))
     assert(interp.eval_aexp(interp.ArrayVar("arr", interp.Num(0)), env) == 1)
     assert(interp.eval_aexp(interp.Aop("+", interp.Num(1), interp.Num(10)), env) == 11)
     assert(interp.eval_aexp(interp.Aop("-", interp.Num(10), interp.Num(5)), env) == 5)
@@ -73,21 +73,21 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assertThrows[java.util.NoSuchElementException](env("x") == 10)
     env = interp.eval_stmt(interp.Assign("x", interp.Num(10)), env)
     assert(env("x").asInstanceOf[interp.RVar].top == 10)
-    assertThrows[java.util.NoSuchElementException](env("arr") == Array(interp.stack(0,1),interp.stack(0,2),interp.stack(0,3)))
+    assertThrows[java.util.NoSuchElementException](env("arr") == Array(interp.stack(0, 0,1),interp.stack(0, 0,2),interp.stack(0, 0,3)))
     env = interp.eval_stmt(interp.AssignArr("arr", Array(interp.Num(10), interp.Num(9), interp.Num(8))), env)
-    assert(env("arr").asInstanceOf[interp.RArray] sameElements Array(interp.stack(10),interp.stack(9),interp.stack(8)))
+    assert(env("arr").asInstanceOf[interp.RArray] sameElements Array(interp.stack(0, 10),interp.stack(0, 9),interp.stack(0, 8)))
     val arr = env("arr").asInstanceOf[interp.RArray]
     assert(arr.head.top == 10)
     env = interp.eval_stmt(interp.UpdateArrIndex("arr", interp.Num(0),interp.Num(99)), env)
     val arr2 = env("arr").asInstanceOf[interp.RArray]
     assert(arr2.head.top != 10 && arr2.head.top == 99)
     env = Map() // clear environment
-    assert(interp.eval_stmt(interp.If(interp.True, List(interp.Skip), List(interp.Assign("i", interp.Num(10))), interp.IfResult("id", interp.stack())), env) == env + ("id" -> interp.stack(  1)))
-    env = interp.eval_stmt(interp.If(interp.False, List(interp.Skip), List(interp.Assign("i", interp.Num(1))), interp.IfResult("id", interp.stack())), env)
-    assert(env("id").asInstanceOf[interp.RVar] == interp.stack(0))
+    assert(interp.eval_stmt(interp.If(interp.True, List(interp.Skip), List(interp.Assign("i", interp.Num(10))), interp.IfResult("id", interp.stack(0))), env) == env + ("id" -> interp.stack(0,   1)))
+    env = interp.eval_stmt(interp.If(interp.False, List(interp.Skip), List(interp.Assign("i", interp.Num(1))), interp.IfResult("id", interp.stack(0))), env)
+    assert(env("id").asInstanceOf[interp.RVar] == interp.stack(0, 0))
     assert(env("i").asInstanceOf[interp.RVar].top == 1)
     val w_id = whileID()
-    assert(interp.eval_stmt(interp.While(interp.False, List(interp.Skip), interp.Counter(w_id)), env) == env + (w_id -> interp.stack( 0)))
+    assert(interp.eval_stmt(interp.While(interp.False, List(interp.Skip), interp.Counter(w_id)), env) == env + (w_id -> interp.stack(0,  0)))
     env = interp.eval_stmt(interp.While(interp.Bop(">", interp.Var("i"), interp.Num(0)), List(interp.Assign("i", interp.Num(0))), interp.Counter(whileID())), env)
     assert(env("i").asInstanceOf[interp.RVar].top == 0)
     env = Map() // clear environment
@@ -102,9 +102,9 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     env = interp.eval(interp.parse("arr[1] := 3"), env)
     val stack_arr = env("arr").asInstanceOf[interp.RArray]
     assert(stack_arr(0).length == 3)
-    assert(stack_arr(0) == interp.stack(1, 2))
+    assert(stack_arr(0) == interp.stack(0, 1, 2))
     assert(stack_arr(1).length == 3)
-    assert(stack_arr(1) == interp.stack(2, 3))
+    assert(stack_arr(1) == interp.stack(0, 2, 3))
     assert(stack_arr(2).length == 2)
     assert(stack_arr(9).length == 2)
   }
@@ -172,7 +172,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("y").asInstanceOf[interp.RVar].length == 2)
     assert(env("y").asInstanceOf[interp.RVar].top == 100)
     assert(env(my_if_id).asInstanceOf[interp.RVar].length == 2)
-    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack(1))
+    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack(0, 1))
 
     env = interp.revEval(interp.revAST(ast), env)
     assert(env("x").asInstanceOf[interp.RVar].length == 1)
@@ -180,7 +180,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("y").asInstanceOf[interp.RVar].length == 1)
     assert(env("y").asInstanceOf[interp.RVar].top == 0)
     assert(env(my_if_id).asInstanceOf[interp.RVar].length == 1)
-    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack())
+    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack(0))
   }
 
 
@@ -194,7 +194,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("y").asInstanceOf[interp.RVar].length == 3)
     assert(env("y").asInstanceOf[interp.RVar].top == 99)
     assert(env(my_if_id).asInstanceOf[interp.RVar].length == 2)
-    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack(0))
+    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack(0, 0))
 
     env = interp.revEval(interp.revAST(ast), env)
     assert(env("x").asInstanceOf[interp.RVar].length == 1)
@@ -202,25 +202,25 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("y").asInstanceOf[interp.RVar].length == 1)
     assert(env("y").asInstanceOf[interp.RVar].top == 0)
     assert(env(my_if_id).asInstanceOf[interp.RVar].length == 1)
-    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack())
+    assert(env(my_if_id).asInstanceOf[interp.RVar] == interp.stack(0))
   }
 
 
   test("Test evaluation of blocks") {
     assert(interp.eval_bl(List(), env) == env)
     env = interp.eval_bl(List(interp.Assign("i10", interp.Num(10)), interp.Assign("i11", interp.Num(11))), env)
-    assert(env("i10").asInstanceOf[interp.RVar] == interp.stack(10))
+    assert(env("i10").asInstanceOf[interp.RVar] == interp.stack(0, 10))
     assert(env("i10").asInstanceOf[interp.RVar].top == 10)
-    assert(env("i11").asInstanceOf[interp.RVar] == interp.stack(11))
+    assert(env("i11").asInstanceOf[interp.RVar] == interp.stack(0, 11))
     assert(env("i11").asInstanceOf[interp.RVar].top == 11)
   }
 
   test("Test eval function") {
     assert(interp.eval(List()) == env)
     env = interp.eval(List(interp.Assign("i10", interp.Num(10)), interp.Assign("i11", interp.Num(11))))
-    assert(env("i10").asInstanceOf[interp.RVar] == interp.stack(10))
+    assert(env("i10").asInstanceOf[interp.RVar] == interp.stack(0, 10))
     assert(env("i10").asInstanceOf[interp.RVar].top == 10)
-    assert(env("i11").asInstanceOf[interp.RVar] == interp.stack(11))
+    assert(env("i11").asInstanceOf[interp.RVar] == interp.stack(0, 11))
     assert(env("i11").asInstanceOf[interp.RVar].top == 11)
   }
 
@@ -248,11 +248,11 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("arr").asInstanceOf[interp.RArray].length == 3)
     val arr = env("arr").asInstanceOf[interp.RArray]
     assert(arr(0).top == 1)
-    assert(arr(0)== interp.stack(1))
+    assert(arr(0)== interp.stack(0, 1))
     assert(arr(1).top == 2)
-    assert(arr(1)== interp.stack(2))
+    assert(arr(1)== interp.stack(0, 2))
     assert(arr(2).top == 3)
-    assert(arr(2)== interp.stack(3))
+    assert(arr(2)== interp.stack(0, 3))
   }
 
   test("Test getting value from array indexes") {
@@ -293,12 +293,12 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test forward evaluation of pre-defined program 1") {
     val ast = interp.parse(fixtures.EX1)
     val env = interp.eval(ast)
-    assert(env("fact").asInstanceOf[interp.RVar] == interp.stack(1, 3, 6, 6))
-    assert(env("n").asInstanceOf[interp.RVar] == interp.stack(3, 2, 1, 0))
+    assert(env("fact").asInstanceOf[interp.RVar] == interp.stack(0, 1, 3, 6, 6))
+    assert(env("n").asInstanceOf[interp.RVar] == interp.stack(0, 3, 2, 1, 0))
     val w = ast.filter(x => x.isInstanceOf[interp.While]).head
     val w_id = w.asInstanceOf[interp.While].counter.id
 
-    assert(env(w_id).asInstanceOf[interp.RVar] == interp.stack(3))
+    assert(env(w_id).asInstanceOf[interp.RVar] == interp.stack(0, 3))
   }
 
 
@@ -306,43 +306,43 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test forward evaluation of pre-defined program 2") {
     val ast = interp.parse(fixtures.EX2)
     val env = interp.eval(ast)
-    assert(env("a").asInstanceOf[interp.RVar] == interp.stack(49, 21, 14, 7))
-    assert(env("b").asInstanceOf[interp.RVar] == interp.stack(28, 7))
-    assert(env("_if6").asInstanceOf[interp.RVar] == interp.stack(1, 0, 1, 1))
-    assert(env("_k12").asInstanceOf[interp.RVar] == interp.stack(4))
+    assert(env("a").asInstanceOf[interp.RVar] == interp.stack(0, 49, 21, 14, 7))
+    assert(env("b").asInstanceOf[interp.RVar] == interp.stack(0, 28, 7))
+    assert(env("_if6").asInstanceOf[interp.RVar] == interp.stack(0, 1, 0, 1, 1))
+    assert(env("_k12").asInstanceOf[interp.RVar] == interp.stack(0, 4))
   }
 
   test("Test forward evaluation of pre-defined program 3") {
     val ast = interp.parse(fixtures.EX3)
     val env = interp.eval(ast)
-    assert(env("x").asInstanceOf[interp.RVar] == interp.stack(12,6,3,10,5,16,8,4,2,1))
-    assert(env("r").asInstanceOf[interp.RVar] == interp.stack(12, 10, 8, 6, 4, 2, 0, 6, 4, 2, 0, 3, 1, 10, 8, 6, 4, 2, 0, 5, 3, 1, 16, 14, 12, 10, 8, 6, 4, 2, 0, 8, 6, 4, 2, 0, 4, 2, 0, 2, 0))
-    assert(env("_if17").asInstanceOf[interp.RVar] == interp.stack( 1, 1, 0, 1, 0, 1, 1, 1, 1))
-    assert(env("_k17").asInstanceOf[interp.RVar] == interp.stack( 6, 3, 1, 5, 2, 8, 4, 2, 1))
-    assert(env("_k19").asInstanceOf[interp.RVar] == interp.stack( 9))
+    assert(env("x").asInstanceOf[interp.RVar] == interp.stack(0, 12,6,3,10,5,16,8,4,2,1))
+    assert(env("r").asInstanceOf[interp.RVar] == interp.stack(0, 12, 10, 8, 6, 4, 2, 0, 6, 4, 2, 0, 3, 1, 10, 8, 6, 4, 2, 0, 5, 3, 1, 16, 14, 12, 10, 8, 6, 4, 2, 0, 8, 6, 4, 2, 0, 4, 2, 0, 2, 0))
+    assert(env("_if17").asInstanceOf[interp.RVar] == interp.stack(0,  1, 1, 0, 1, 0, 1, 1, 1, 1))
+    assert(env("_k17").asInstanceOf[interp.RVar] == interp.stack(0,  6, 3, 1, 5, 2, 8, 4, 2, 1))
+    assert(env("_k19").asInstanceOf[interp.RVar] == interp.stack(0,  9))
   }
 
   test("Test forward evaluation of pre-defined program 4") {
     val ast = interp.parse(fixtures.EX4)
     val env = interp.eval(ast)
-    assert(env("x").asInstanceOf[interp.RVar] == interp.stack(13))
-    assert(env("r").asInstanceOf[interp.RVar] == interp.stack(13, 11, 9, 7, 5, 3, 1, 13, 10, 7, 4, 1, 13, 9, 5, 1, 13, 8, 3, 13, 7, 1))
-    assert(env("isprime").asInstanceOf[interp.RVar] == interp.stack(1))
-    assert(env("limit").asInstanceOf[interp.RVar] == interp.stack(7))
-    assert(env("factor").asInstanceOf[interp.RVar] == interp.stack(2, 3, 4, 5, 6, 7))
-    assert(env("_k29").asInstanceOf[interp.RVar] == interp.stack(5))
-    assert(env("_k25").asInstanceOf[interp.RVar] == interp.stack(6, 4, 3, 2, 2))
-    assert(env("_if22").asInstanceOf[interp.RVar] == interp.stack(0,0,0,0,0))
+    assert(env("x").asInstanceOf[interp.RVar] == interp.stack(0, 13))
+    assert(env("r").asInstanceOf[interp.RVar] == interp.stack(0, 13, 11, 9, 7, 5, 3, 1, 13, 10, 7, 4, 1, 13, 9, 5, 1, 13, 8, 3, 13, 7, 1))
+    assert(env("isprime").asInstanceOf[interp.RVar] == interp.stack(0, 1))
+    assert(env("limit").asInstanceOf[interp.RVar] == interp.stack(0, 7))
+    assert(env("factor").asInstanceOf[interp.RVar] == interp.stack(0, 2, 3, 4, 5, 6, 7))
+    assert(env("_k29").asInstanceOf[interp.RVar] == interp.stack(0, 5))
+    assert(env("_k25").asInstanceOf[interp.RVar] == interp.stack(0, 6, 4, 3, 2, 2))
+    assert(env("_if22").asInstanceOf[interp.RVar] == interp.stack(0, 0,0,0,0,0))
   }
 
   test("Test forward evaluation of pre-defined program 5") {
     val ast = interp.parse(fixtures.EX5)
     val env = interp.eval(ast)
-    assert(env("a").asInstanceOf[interp.RVar] == interp.stack(1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89))
-    assert(env("b").asInstanceOf[interp.RVar] == interp.stack(1,2,3,5,8,13,21,34,55,89,144))
-    assert(env("i").asInstanceOf[interp.RVar] == interp.stack(0,1,2,3,4,5,6,7,8,9,10))
-    assert(env("tmp").asInstanceOf[interp.RVar] == interp.stack(1,1,2,3,5,8,13,21,34,55))
-    assert(env("_k31").asInstanceOf[interp.RVar] == interp.stack(10))
+    assert(env("a").asInstanceOf[interp.RVar] == interp.stack(0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89))
+    assert(env("b").asInstanceOf[interp.RVar] == interp.stack(0, 1,2,3,5,8,13,21,34,55,89,144))
+    assert(env("i").asInstanceOf[interp.RVar] == interp.stack(0, 0,1,2,3,4,5,6,7,8,9,10))
+    assert(env("tmp").asInstanceOf[interp.RVar] == interp.stack(0, 1,1,2,3,5,8,13,21,34,55))
+    assert(env("_k31").asInstanceOf[interp.RVar] == interp.stack(0, 10))
   }
 
   test("Test backward evaluation of pre-defined programs") {

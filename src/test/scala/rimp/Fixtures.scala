@@ -95,5 +95,5 @@ class Fixtures {
       """
 
 
-  val allExamples: List[String] = List(EX1, EX2, EX3, EX4, EX5)
+  val allExamples: List[String] = List(EX1, EX2, EX3, EX4, EX5, arrProg1, arrProg2, if_true_prog, if_false_prog)
 }

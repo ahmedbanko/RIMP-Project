@@ -29,10 +29,7 @@ class Parser extends Tokenizer {
   }
 
 
-  case class Counter(id: String="NONE_while", count: Int = 0)
-
-  case class IfResult(id: String="NONE_if", result: RVar = stack(0))
-
+  case class Counter(id: String="NONE", count: Int = 0)
 
   abstract class Parser[I: IsSeq, T] {
     def parse(in: I): Set[(T, I)]
@@ -144,7 +141,7 @@ class Parser extends Tokenizer {
   type ArrBlock = Array[AExp]
 
   case object Skip extends Stmt
-  case class If(a: BExp, bl1: Block, bl2: Block, boolStack: IfResult) extends Stmt
+  case class If(a: BExp, bl1: Block, bl2: Block, id: String="NONE") extends Stmt
   case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
@@ -158,8 +155,8 @@ class Parser extends Tokenizer {
   case class Num(i: Int) extends AExp
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
 
-  case object True extends BExp
-  case object False extends BExp
+//  case object True extends BExp
+//  case object False extends BExp
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
   case class Not(b: BExp) extends BExp
 
@@ -194,8 +191,8 @@ class Parser extends Tokenizer {
       (AExp ~ p">" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">", x, z) } ||
       (AExp ~ p">=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">=", x, z) } ||
       (AExp ~ p"<=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop("<=", x, z) } ||
-      p"true".map[BExp] { _ => True } ||
-      p"false".map[BExp] { _ => False } ||
+//      p"true".map[BExp] { _ => True } ||
+//      p"false".map[BExp] { _ => False } ||
       (p"~" ~ BExp).map[BExp] { case _ ~ x => Not(x) } ||
       (p"(" ~ BExp ~ p")").map[BExp] { case _ ~ x ~ _ => x }
 
@@ -211,7 +208,7 @@ class Parser extends Tokenizer {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
-        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, IfResult()) } ||
+        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter())} ||
       (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
       (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
@@ -231,7 +228,7 @@ class Parser extends Tokenizer {
   def injectIds(b: Block): List[Stmt] = {
     b.map {
       case w: While => w.copy(b = w.b, counter = Counter(id = whileID()), bl = injectIds(w.bl))
-      case i: If => i.copy(a = i.a, boolStack = IfResult(id = ifID()), bl1 = injectIds(i.bl1), bl2 = injectIds(i.bl2))
+      case i: If => i.copy(a = i.a, id = ifID(), bl1 = injectIds(i.bl1), bl2 = injectIds(i.bl2))
       case other => other
     }
   }
@@ -245,9 +242,9 @@ class Parser extends Tokenizer {
 
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2, if_res) =>
-      val ifId = if_res.id.split("_")(1)
-      s"${if_res.id} := ${if_res.result};\nif-$ifId ${stmt2String(a)} then {\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
+    case If(a, bl1, bl2, if_id) =>
+      val ifId = if_id.split("_")(1)
+      s"${if_id} := 0;\nif-$ifId ${stmt2String(a)} then {\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
     case While(b, bl, counter) =>
       val whileId = counter.id.split("_")(1)
       s"${counter.id} := ${counter.count};\nwhile-$whileId ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
@@ -262,8 +259,8 @@ class Parser extends Tokenizer {
     case Num(i) => s"$i"
     case Aop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
     case Bop(o, a1, a2) => s"(${stmt2String(a1)} $o ${stmt2String(a2)})"
-    case True => "true"
-    case False => "false"
+//    case True => "true"
+//    case False => "false"
     case Not(b) => s"~${stmt2String(b)}"
   }
 
@@ -279,9 +276,9 @@ class Parser extends Tokenizer {
 
   private def stmt2RevStr(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(_, bl1, bl2, if_res) =>
-      val ifId = if_res.id.split("_")(1)
-      s"if-$ifId (!${if_res.id}) then {\n${bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+    case If(_, bl1, bl2, if_id) =>
+      val ifId = if_id.split("_")(1)
+      s"if-$ifId (!$if_id) then {\n${bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
     case While(_, bl, counter) =>
       val whileId = counter.id.split("_")(1)
       s"while-$whileId (!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"
@@ -296,8 +293,8 @@ class Parser extends Tokenizer {
     case Num(i) => s"$i"
     case Aop(o, a1, a2) => s"${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)}"
     case Bop(o, a1, a2) => s"(${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)})"
-    case True => "true"
-    case False => "false"
+//    case True => "true"
+//    case False => "false"
     case Not(b) => s"~${stmt2RevStr(b)}"
   }
 
@@ -312,8 +309,8 @@ class Parser extends Tokenizer {
   }
 
   private def revStmt(stmt: Stmt) = stmt match {
-    case If (_, bl1, bl2, boolStack) =>
-      If(Bop("=", Var(boolStack.id), Num(1)), revAST(bl1), revAST(bl2), boolStack)
+    case If (_, bl1, bl2, id) =>
+      If(Bop("=", Var(id), Num(1)), revAST(bl1), revAST(bl2), id)
     case While(_, bl, counter) =>
       While(Bop(">", Var(counter.id), Num(0)), revAST(bl), counter)
     //    case AssignThread (id, bl) =>{

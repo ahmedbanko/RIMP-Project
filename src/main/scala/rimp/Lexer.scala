@@ -218,7 +218,7 @@ class Lexer {
     env(lex_simp(r, s.toList))
 
 
-  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "true" | "false"
+  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "run" | "thread" // | "true" | "false"
   val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~" | "?"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString
   val LETTER: Rexp = RANGE(alphabet.toSet)

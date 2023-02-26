@@ -1,6 +1,9 @@
 package rimp
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class Interpreter extends Parser {
 
@@ -27,8 +30,8 @@ class Interpreter extends Parser {
 
 
   def eval_bexp(b: BExp, env: Env): Boolean = b match {
-    case True => true
-    case False => false
+//    case True => true
+//    case False => false
     case Bop("=", a1, a2) => eval_aexp(a1, env) == eval_aexp(a2, env)
     case Bop("!=", a1, a2) => !(eval_aexp(a1, env) == eval_aexp(a2, env))
     case Bop(">", a1, a2) => eval_aexp(a1, env) > eval_aexp(a2, env)
@@ -38,12 +41,14 @@ class Interpreter extends Parser {
     case Not(b) => !eval_bexp(b, env)
   }
 
-
-  def eval_thread(bl: Block, env: Env): Env = {
-    new Thread(() => {
-      eval_bl(bl, env)
-    }).start()
-    env
+  def eval_thread(id: String, env: Env): Future[Env] = Future {
+    synchronized {
+      val bl_stack = env(id).asInstanceOf[mutable.Stack[Block]]
+      val bl_env_stack = env.getOrElse(s"${id}_env", mutable.Stack[Env](Map())).asInstanceOf[mutable.Stack[Env]]
+      val bl_evaluated: Env = eval_bl(bl_stack.top, env)
+      bl_env_stack.push(bl_evaluated)
+      env + (s"${id}_env" -> bl_env_stack)
+    }
   }
 
   def eval_stmt(s: Stmt, env: Env): Env =
@@ -67,16 +72,22 @@ class Interpreter extends Parser {
         val arr = env(id).asInstanceOf[RArray]
         arr(index_eval).push(newVal_eval)
         env
-      case AssignThread(id, bl) => env + (id -> bl)
-      case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
-      case If(b, bl1, bl2, if_res) =>
-        val stack = env.getOrElse(if_res.id, mutable.Stack[Int](0)).asInstanceOf[RVar]
+      case AssignThread(id, bl) =>
+        val old_stack = env.getOrElse(id, mutable.Stack[Block](List())).asInstanceOf[mutable.Stack[Block]]
+        old_stack.push(injectIds(bl))
+        env + (id -> old_stack)
+
+      case RunThread(id) =>
+        Await.result(eval_thread(id, env), 5000.millis)
+
+      case If(b, bl1, bl2, if_id) =>
+        val stack = env.getOrElse(if_id, mutable.Stack[Int](0)).asInstanceOf[RVar]
         if (eval_bexp(b, env)) {
           stack.push(1) // represents true
-          eval_bl(bl1, env + (if_res.id -> stack))
+          eval_bl(bl1, env + (if_id -> stack))
         } else {
           stack.push(0) // represents false
-          eval_bl(bl2, env + (if_res.id -> stack))
+          eval_bl(bl2, env + (if_id -> stack))
         }
       case While(b, bl, counter) =>
         if (eval_bexp(b, env)) {
@@ -132,15 +143,22 @@ class Interpreter extends Parser {
         arr(index_eval).pop
         env
       //      TODO: thread reverse evaluation
-      case AssignThread(id, bl) => env + (id -> bl)
-      case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
+      case AssignThread(id, bl) => {
+        val t_stack = env(id).asInstanceOf[mutable.Stack[Block]]
+        t_stack.pop()
+        env
+      }
+      case RunThread(id) =>
+        val t_env_stack = env(s"${id}_env").asInstanceOf[mutable.Stack[Env]]
+        t_env_stack.pop()
+        env
 
-      case If(_, bl1, bl2, if_res) =>
-        val stack = env(if_res.id).asInstanceOf[RVar]
+      case If(_, bl1, bl2, if_id) =>
+        val stack = env(if_id).asInstanceOf[RVar]
         if (stack.pop() == 1) {
-          revEval(bl1, env + (if_res.id -> stack))
+          revEval(bl1, env + (if_id -> stack))
         } else {
-          revEval(bl2, env + (if_res.id -> stack))
+          revEval(bl2, env + (if_id -> stack))
         }
       case While(b, bl, counter) =>
         val c_stack = env(counter.id).asInstanceOf[RVar]

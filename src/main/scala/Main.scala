@@ -137,7 +137,34 @@ object Main extends App {
           right := !right - 1
        }
       """
-  val p = i.parse(sort_arr_prog)
+
+  val thread_prog =
+    """thread t1 := {
+        arr := [1, 2, 3, 4, 5];
+          arr_len := 5;
+          left := 0;
+          right := !arr_len - 1;
+          while(!left < !right) do {
+             tmp_left := arr[!left];
+             tmp_right := arr[!right];
+             arr[!right] := !tmp_left;
+              arr[!left] := !tmp_right;
+             left := !left + 1;
+             right := !right - 1
+          }
+       };
+       run ?t1;
+       thread t2 := {
+            fact := 1;
+           n := 3;
+           while (!n > 0) do {
+                fact := !n * !fact;
+                n := !n - 1
+           }
+           };
+           run ?t2
+     """
+  val p = i.parse(thread_prog)
 //  p.foreach(println)
 //  println("------------")
   val rp = i.revAST(p)

@@ -95,11 +95,15 @@ object Main extends App {
 //  }
 
   val stacks =
-    """n := 10;
+    """n := 2;
        while(!n > 0) do {
-            n := !n - 1
+           n := !n - 1;
+           n2 := 10;
+           while(!n2 > 0) do {
+                n2 := !n2 - 1
+           }
        }
-      """.stripMargin
+      """
 
   val if_prog =
     """
@@ -164,7 +168,7 @@ object Main extends App {
            };
            run ?t2
      """
-  val p = i.parse(thread_prog)
+  val p = i.parse(stacks)
 //  p.foreach(println)
 //  println("------------")
   val rp = i.revAST(p)

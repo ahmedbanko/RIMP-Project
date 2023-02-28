@@ -51,6 +51,11 @@ class Interpreter extends Parser {
     }
   }
 
+  def update_stack_top(c_stack: RVar, i: Int): RVar = {
+    c_stack.pop()
+    c_stack.push(i)
+  }
+
   def eval_stmt(s: Stmt, env: Env): Env =
     s match {
       case Skip => env
@@ -90,13 +95,15 @@ class Interpreter extends Parser {
           eval_bl(bl2, env + (if_id -> stack))
         }
       case While(b, bl, counter) =>
+        val c_stack = env.getOrElse(counter.id, stack(0)).asInstanceOf[RVar]
+        if(counter.count == 0){
+          c_stack.push(0)
+        }
         if (eval_bexp(b, env)) {
-          eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env))
+          eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env + (counter.id -> update_stack_top(c_stack, counter.count+1))))
         }
         else {
-          val c_stack = env.getOrElse(counter.id, stack(0)).asInstanceOf[RVar]
-
-          env + (counter.id -> c_stack.push(counter.count))
+          env
         }
     }
 
@@ -128,7 +135,7 @@ class Interpreter extends Parser {
       case AssignArr(id, _) =>
         val old_array = env(id).asInstanceOf[RArray]
         for ((arr, _) <- old_array.zipWithIndex) {
-          if(arr.size > 1) arr.pop
+          if (arr.size > 1) arr.pop
         }
         env + (id -> old_array)
       case ArrayWithSize(id, _) =>
@@ -162,13 +169,10 @@ class Interpreter extends Parser {
         }
       case While(b, bl, counter) =>
         val c_stack = env(counter.id).asInstanceOf[RVar]
-        if(c_stack.length > 1) {
-          var c = c_stack.pop
-          while (c > 0) {
-            revEval_stmt(While(b, bl, counter), revEval(bl, env))
-            c -= 1
-          }
-        }
+        val c_top = c_stack.top
+        if (c_top > 0) {
+          revEval_stmt(While(b, bl, counter), revEval(bl, env + (counter.id -> update_stack_top(c_stack, c_top-1))))
+        } else c_stack.pop
         env
     }
 

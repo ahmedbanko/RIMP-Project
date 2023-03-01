@@ -1,4 +1,4 @@
-import rimp.Interpreter
+import rimp.{Interpreter, RVar}
 
 object Main extends App {
 //  val p = new Parser()
@@ -168,29 +168,46 @@ object Main extends App {
            };
            run ?t2
      """
-  val p = i.parse(stacks)
-//  p.foreach(println)
-//  println("------------")
-  val rp = i.revAST(p)
-//  println(i.ast2Code(p))
+//  val p = i.parse(stacks)
+////  p.foreach(println)
 ////  println("------------")
-////  println(i.revAst2Code(p))
-  val env = i.eval(p)
-  println(i.stack_tops(env))
-////  println(rp)
-  val revenv = i.revEval(rp, env)
-  println(i.stack_tops(revenv))
+//  val rp = i.revAST(p)
+////  println(i.ast2Code(p))
+//////  println("------------")
+//////  println(i.revAst2Code(p))
+//  val env = i.eval(p)
+//  println(i.stack_tops(env))
+//////  println(rp)
+//  val revenv = i.revEval(rp, env)
+//  println(i.stack_tops(revenv))
+////
+////  println(i.stack(1, 2))
 //
-//  println(i.stack(1, 2))
-
-//  println(i.lexing_simp(i.RIMP_REGS, "n := 10"))
-  println("done")
+////  println(i.lexing_simp(i.RIMP_REGS, "n := 10"))
+//  println("done")
 //
 //  //  i.evalBySteps(p, Map())
 
 
-
-
+  val root = new RVar()
+//  println(root)
+  root.push(1)
+//  println(root)
+  root.push(3)
+  root.push(6)
+  root.push(6)
+  println(root)
+  println(root.pop)
+  println(root)
+  println(root.pop)
+  println(root)
+  println(root.pop)
+  println(root)
+  println(root.pop)
+  println(root)
+  println(root.pop)
+  println(root)
+  println(root)
 
 }
 

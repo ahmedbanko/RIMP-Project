@@ -16,11 +16,11 @@ class Interpreter extends Parser {
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
-    case Var(s) => env(s).asInstanceOf[RVar].top
+    case Var(s) => env(s).asInstanceOf[RVar].top.value
     case ArrayVar(id, index) =>
       val valsList = env(id).asInstanceOf[RArray]
       val indexVal = eval_aexp(index, env)
-      valsList(indexVal).top
+      valsList(indexVal).top.value
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
     case Aop("*", a1, a2) => eval_aexp(a1, env) * eval_aexp(a2, env)
@@ -51,8 +51,8 @@ class Interpreter extends Parser {
     }
   }
 
-  def update_stack_top(c_stack: RVar, i: Int): RVar = {
-    c_stack.pop()
+  def update_stack_top(c_stack: mutable.Stack[Int], i: Int): mutable.Stack[Int] = {
+    c_stack.pop
     c_stack.push(i)
   }
 
@@ -60,16 +60,16 @@ class Interpreter extends Parser {
     s match {
       case Skip => env
       case Assign(x, a) =>
-        val old_stack = env.getOrElse(x, stack(0))
+        val old_stack = env.getOrElse(x, stack())
         env + (x -> old_stack.asInstanceOf[RVar].push(eval_aexp(a, env)))
       case AssignArr(id, values) =>
-        val old_array = env.getOrElse(id, Array.fill(values.length)(stack(0))).asInstanceOf[RArray]
+        val old_array = env.getOrElse(id, Array.fill(values.length)(stack())).asInstanceOf[RArray]
         for ((arr, i) <- old_array.zipWithIndex) {
           arr.push(eval_aexp(values(i), env))
         }
         env + (id -> old_array)
       case ArrayWithSize(id, size) =>
-        val new_array = Array.fill(eval_aexp(size, env))(stack(0))
+        val new_array = Array.fill(eval_aexp(size, env))(stack())
         env + (id -> new_array)
       case UpdateArrIndex(id, index, newVal) =>
         val newVal_eval = eval_aexp(newVal, env)
@@ -86,7 +86,7 @@ class Interpreter extends Parser {
         Await.result(eval_thread(id, env), 5000.millis)
 
       case If(b, bl1, bl2, if_id) =>
-        val stack = env.getOrElse(if_id, mutable.Stack[Int](0)).asInstanceOf[RVar]
+        val stack = env.getOrElse(if_id, mutable.Stack[Int](0)).asInstanceOf[mutable.Stack[Int]]
         if (eval_bexp(b, env)) {
           stack.push(1) // represents true
           eval_bl(bl1, env + (if_id -> stack))
@@ -95,7 +95,7 @@ class Interpreter extends Parser {
           eval_bl(bl2, env + (if_id -> stack))
         }
       case While(b, bl, counter) =>
-        val c_stack = env.getOrElse(counter.id, stack(0)).asInstanceOf[RVar]
+        val c_stack = env.getOrElse(counter.id, mutable.Stack[Int](0)).asInstanceOf[mutable.Stack[Int]]
         if(counter.count == 0){
           c_stack.push(0)
         }
@@ -118,9 +118,10 @@ class Interpreter extends Parser {
     env.map { case (key, value) =>
       value match {
         case i: Int => s"$key -> $i"
-        case s: RVar => s"$key -> ${s.top}"
+        case s: RVar => s"$key -> ${s.top.value}"
+        case s: mutable.Stack[Int] => s"$key -> ${s.top}"
         case s_l: RArray =>
-          s"$key -> Array[${s_l.map(s => s.top).mkString(", ")}]"
+          s"$key -> Array[${s_l.map(s => s.top.value).mkString(", ")}]"
       }
     }.mkString("Map(", ", ", ")")
   }
@@ -161,14 +162,14 @@ class Interpreter extends Parser {
         env
 
       case If(_, bl1, bl2, if_id) =>
-        val stack = env(if_id).asInstanceOf[RVar]
-        if (stack.pop() == 1) {
+        val stack = env(if_id).asInstanceOf[mutable.Stack[Int]]
+        if (stack.pop == 1) {
           revEval(bl1, env + (if_id -> stack))
         } else {
           revEval(bl2, env + (if_id -> stack))
         }
       case While(b, bl, counter) =>
-        val c_stack = env(counter.id).asInstanceOf[RVar]
+        val c_stack = env(counter.id).asInstanceOf[mutable.Stack[Int]]
         val c_top = c_stack.top
         if (c_top > 0) {
           revEval_stmt(While(b, bl, counter), revEval(bl, env + (counter.id -> update_stack_top(c_stack, c_top-1))))

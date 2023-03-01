@@ -1,39 +1,46 @@
 package rimp
 
 class RVar(var root_in: Node = new Node(0)) {
-  private var size = 1
+  // default 0 means all variables in RIMP initially have the value 0
+  private var stackSize = 1
   private var root = root_in
 
   def top: Node = root
+  def size: Int = stackSize
 
-  def push(newValue: Int): Unit = {
+  def push(newValue: Int): RVar = {
     val newRoot = new Node(newValue, right=Some(this.root))
     val newRoot_left = new Node(newValue-this.top.value, parent=Some(newRoot))
     newRoot.left = Some(newRoot_left)
 
     root.parent = Some(newRoot)
-    size+=1
+    stackSize+=1
     root = newRoot
+    this
   }
 
   def pop: Int = {
     val out = root
-    if (size == 1) {
-      size -= 1
-      0
-    } else if(size > 1) {
+   if(stackSize > 1) {
       root = root.right.get
-      size-=1
+      root.parent = None
+      stackSize-=1
       out.value
     }
-    else throw new Exception("Empty stack")
+    else throw new Exception("Empty stack (RIMP stacks with only 0 are considered empty)")
   }
 
   override def toString: String = {
-    if (size > 1)
+    if (stackSize > 1)
     s"(${root.value}, +(${root.left.get.toString}, ${root.right.get.toString})"
-    else if (size == 1)s"(${root.value}, +(0, 0))"
+    else if (stackSize == 1)s"(${root.value}, +(0, 0))"
     else "None"
+  }
+
+  override def equals(obj: Any): Boolean = {
+    (this.size == obj.asInstanceOf[RVar].size) &&
+      (this.top.value == obj.asInstanceOf[RVar].top.value) &&
+      (obj.toString == this.toString)
   }
 
 

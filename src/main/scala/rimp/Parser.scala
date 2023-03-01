@@ -1,7 +1,5 @@
 package rimp
 
-import scala.collection.mutable
-
 class Parser extends Tokenizer {
   //  --------- RIMP.Parser -------------
 
@@ -12,7 +10,7 @@ class Parser extends Tokenizer {
   type IsSeq[A] = A => Seq[_]
 
   type Tokens = Seq[Token]
-  type RVar = mutable.Stack[Int]
+//  type RVar = mutable.Stack[Int]
   type RArray = Array[RVar]
 
   var while_count: Int = 0
@@ -334,6 +332,8 @@ class Parser extends Tokenizer {
 
 
   def stack(vars: Int*): RVar = {
-    mutable.Stack[Int]().pushAll(vars)
+    val out = new RVar()
+    vars.foreach(x => out.push(x))
+    out
   }
 }

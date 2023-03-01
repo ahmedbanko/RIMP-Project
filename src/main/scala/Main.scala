@@ -190,25 +190,38 @@ object Main extends App {
 
 
   val root = new RVar()
+  println(root.size)
+  root.push(49)
+  println(root.size)
 //  println(root)
-  root.push(1)
+  root.push(21)
+  println(root.size)
+  root.push(14)
+  println(root.size)
+  root.push(7)
+  println(root.size)
 //  println(root)
-  root.push(3)
-  root.push(6)
-  root.push(6)
-  println(root)
-  println(root.pop)
-  println(root)
-  println(root.pop)
-  println(root)
-  println(root.pop)
-  println(root)
-  println(root.pop)
-  println(root)
-  println(root.pop)
-  println(root)
-  println(root)
+ root.pop
+  println(root.size)
+//  println(root)
+  root.pop
+//  println(root)
+  println(root.size)
+  root.pop
+//  println(root)
+  println(root.size)
+  root.pop
+//  println(root)
+  println(root.size)
+  root.pop
+  println(root.size)
 
+//  EX2
+//  (7, +(-7, +(-7, +(-28, +(49, +(0, 0)))))
+//  (14, +(-7, +(-28, +(49, +(0, 0)))))
+//  (21, +(-28, +(49, +(0, 0))))
+//  (49, +(49, +(0, 0)))
+//  (0, +(0, 0))
 }
 
 

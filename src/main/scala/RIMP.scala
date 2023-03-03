@@ -1,8 +1,8 @@
-import rimp.{Interpreter, RVar}
 
-object Main extends App {
+
+object RIMP extends App {
 //  val p = new Parser()
-  val i = new Interpreter()
+//  val i = new Interpreter()
   val prog =
     """a := 10;
        a := 9;
@@ -189,39 +189,60 @@ object Main extends App {
 //  //  i.evalBySteps(p, Map())
 
 
-  val root = new RVar()
-  println(root.size)
-  root.push(49)
-  println(root.size)
-//  println(root)
-  root.push(21)
-  println(root.size)
-  root.push(14)
-  println(root.size)
-  root.push(7)
-  println(root.size)
-//  println(root)
- root.pop
-  println(root.size)
-//  println(root)
-  root.pop
-//  println(root)
-  println(root.size)
-  root.pop
-//  println(root)
-  println(root.size)
-  root.pop
-//  println(root)
-  println(root.size)
-  root.pop
-  println(root.size)
-
 //  EX2
 //  (7, +(-7, +(-7, +(-28, +(49, +(0, 0)))))
 //  (14, +(-7, +(-28, +(49, +(0, 0)))))
 //  (21, +(-28, +(49, +(0, 0))))
 //  (49, +(49, +(0, 0)))
 //  (0, +(0, 0))
+
+
+
+  println("Welcome to RIMP Interpreter!")
+  println("Type help to see possible commands and options.")
+  var exit = false
+  while (!exit) {
+    val input = scala.io.StdIn.readLine()
+    val parts = input.split("\\s+")
+    val command = parts.head
+    val parameters = parts.tail
+    print(s"command: $command ")
+    command match {
+      case "translate" => translate(parameters.toList)
+      case "reverse" => reverse(parameters.toList)
+      case "evaluate" => evaluate(parameters.toList)
+      case "invert" => invert(parameters.toList)
+      case "help" => help(parameters.toList)
+      case "exit" => exit = true
+      case _ => println(s"Unknown command: $command")
+    }
+  }
+
+
+  def translate(parameters: List[String]) = {
+    parameters.foreach(x => print(s"$x "))
+    println()
+  }
+
+  def reverse(parameters: List[String]) = {
+    parameters.foreach(x => print(s"$x "))
+    println()
+  }
+
+  def evaluate(parameters: List[String]) = {
+    parameters.foreach(x => print(s"$x "))
+    println()
+  }
+
+  def invert(parameters: List[String]) = {
+    parameters.foreach(x => print(s"$x "))
+    println()
+  }
+  def help(parameters: List[String]) = {
+    parameters.foreach(x => print(s"$x "))
+    println()
+  }
+
 }
 
 

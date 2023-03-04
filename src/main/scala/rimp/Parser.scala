@@ -68,7 +68,6 @@ class Parser extends Tokenizer {
       case T_RSQRB :: tail if sin == "]" => Set((T_RSQRB, tail))
       case T_LPAREN :: tail if sin == "{" => Set((T_LPAREN, tail))
       case T_RPAREN :: tail if sin == "}" => Set((T_RPAREN, tail))
-      case T_STR(s) :: tail if s == sin => Set((T_STR(s), tail))
       case T_ID(s) :: tail if s == sin => Set((T_ID(s), tail))
       case T_OP(s) :: tail if s == sin => Set((T_OP(s), tail))
       case T_NUM(n) :: tail if n.toString == sin => Set((T_NUM(n), tail))
@@ -228,7 +227,7 @@ class Parser extends Tokenizer {
     injectIds(p)
   }
 
-
+// TODO: check it prints correctly
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
     case If(a, bl1, bl2, if_id) =>
@@ -259,6 +258,7 @@ class Parser extends Tokenizer {
       }
   }
 
+  // TODO: check it prints correctly
   private def stmt2RevStr(stmt: Exp): String = stmt match {
     case Skip => "skip"
     case If(_, bl1, bl2, if_id) =>

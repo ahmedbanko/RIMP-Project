@@ -17,6 +17,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     super.afterEach()
     // clear environment
     env = Map()
+
     // reset counters
     i.while_count = 0
     i.if_count = 0
@@ -40,8 +41,6 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 
 
   test("Test evaluation of boolean expressions") {
-//    assert(i.eval_bexp(i.True, env))
-//    assert(!i.eval_bexp(i.False, env))
     assert(i.eval_bexp(i.Bop("=", i.Num(10), i.Num(10)), env))
     assert(!i.eval_bexp(i.Bop("=", i.Num(0), i.Num(10)), env))
     assert(!i.eval_bexp(i.Bop("!=", i.Num(10), i.Num(10)), env))
@@ -67,21 +66,11 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("x").asInstanceOf[RVar].top.value == 10)
     assertThrows[java.util.NoSuchElementException](env("arr") == Array(i.stack( 0,1),i.stack( 0,2),i.stack( 0,3)))
     env = i.eval_stmt(i.AssignArr("arr", Array(i.Num(10), i.Num(9), i.Num(8))), env)
-//    assert(env("arr").asInstanceOf[i.RArray] sameElements Array(i.stack( 10),i.stack( 9), i.stack( 8)))
     val arr = env("arr").asInstanceOf[i.RArray].top
     assert(arr.head.top.value == 10)
     env = i.eval_stmt(i.UpdateArrIndex("arr", i.Num(0),i.Num(99)), env)
     val arr2 = env("arr").asInstanceOf[i.RArray].top
     assert(arr2.head.top.value != 10 && arr2.head.top.value == 99)
-    env = Map() // clear environment
-//    assert(i.eval_stmt(i.If(i.True, List(i.Skip), List(i.Assign("i", i.Num(10))), i.IfResult("id")), env) == env + ("id" -> i.stack(   1)))
-//    env = i.eval_stmt(i.If(i.False, List(i.Skip), List(i.Assign("i", i.Num(1))), i.IfResult("id")), env)
-//    assert(env("id").asInstanceOf[RVar] == i.stack( 0))
-//    assert(env("i").asInstanceOf[RVar].top == 1)
-//    val w_id = i.whileID()
-//    assert(i.eval_stmt(i.While(i.False, List(i.Skip), i.Counter(w_id)), env) == env + (w_id -> i.stack(  0)))
-//    env = i.eval_stmt(i.While(i.Bop(">", i.Var("i"), i.Num(0)), List(i.Assign("i", i.Num(0))), i.Counter(i.whileID())), env)
-//    assert(env("i").asInstanceOf[RVar].top == 0)
     env = Map() // clear environment
     env = i.eval_stmt(i.ArrayWithSize("arr",i.Num(10)), env)
     assert(env("arr").asInstanceOf[i.RArray].top.length == 10)
@@ -99,6 +88,32 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(stack_arr(1) == i.stack( 2, 3))
     assert(stack_arr(2).size == 2)
     assert(stack_arr(9).size == 2)
+  }
+
+  test("Test eval_stmt of UpdateArrIndex with different arr assigned to different arrays") {
+    env = i.eval(i.parse("arr := [1,2,3,4,5,6,7,8,9,10]"), env)
+    val arrs_stack = env("arr").asInstanceOf[i.RArray]
+    var top_arr = arrs_stack.top
+    assert(arrs_stack.length == 2)
+    assert(top_arr.length == 10)
+    for (i <- top_arr.indices) {
+      assert(top_arr(i).size == 2)
+    }
+
+    env = i.eval(i.parse("arr := [1,2,3,4,5]"), env)
+    top_arr = arrs_stack.top
+    assert(arrs_stack.length == 3)
+    assert(top_arr.length == 5)
+    for (i <- top_arr.indices) {
+      assert(top_arr(i).size == 2)
+    }
+    env = i.eval(i.parse("arr[0] := arr[0] * 2; arr[1] := arr[1] * 2; arr[2] := arr[2] * 2"), env)
+    top_arr = arrs_stack.top
+    assert(arrs_stack.length == 3)
+    assert(top_arr.length == 5)
+    assert(top_arr(0).size == 3 && top_arr(0).top.value == 2)
+    assert(top_arr(1).size == 3 && top_arr(1).top.value == 4)
+    assert(top_arr(2).size == 3 && top_arr(2).top.value == 6)
   }
 
 
@@ -153,6 +168,19 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
       assert(rev_stack_arr(i).top.value == 0)
     }
   }
+
+
+  test("Test revEval_stmt of UpdateArrIndex with different arr assigned to different arrays") {
+    val ast = i.parse("arr := [1,2,3,4,5,6,7,8,9,10];arr := [1,2,3,4,5];arr[0] := arr[0] * 2; arr[1] := arr[1] * 2; arr[2] := arr[2] * 2")
+    val rev_ast = i.revAST(ast)
+    env = i.eval(ast, env)
+    env = i.revEval(rev_ast, env)
+    val arrs_stack: i.RArray = env("arr").asInstanceOf[i.RArray]
+    val top_arr: Array[RVar] = arrs_stack.top
+    assert(arrs_stack.size == 1)
+    assert(top_arr.forall(stackOnlyHasZero))
+  }
+
 
   test("Test revEval_stmt of If-then-else when if true") {
     val ast = i.parse(fixtures.if_true_prog)
@@ -353,9 +381,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   }
 
 
-  def stackOnlyHasZero(stack: Any): Boolean = {
-    val stream = new java.io.ByteArrayOutputStream()
-
+  def stackOnlyHasZero(stack: Any): Boolean =
     stack match {
       case s: RVar => s.size == 1 && s.top.value == 0
       case s: mutable.Stack[_] if s.head.isInstanceOf[Int] => s.size == 1 && s.head == 0
@@ -363,6 +389,5 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
          s.head.asInstanceOf[Array[RVar]].forall(stackOnlyHasZero)
       case _ => throw new RuntimeException("stackOnlyHasZero function received unsupported type")
     }
-  }
   
 }

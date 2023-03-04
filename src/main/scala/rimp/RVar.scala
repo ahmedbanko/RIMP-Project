@@ -27,7 +27,7 @@ class RVar(var root_in: Node = new Node(0)) {
       stackSize-=1
       out.value
     }
-    else throw new Exception("Empty stack (RIMP stacks with only 0 are considered empty)")
+    else throw new Exception("Empty stack: (RIMP stacks with only 0 are considered empty)")
   }
 
   override def toString: String = {

@@ -214,12 +214,12 @@ class Lexer {
       inj(r, c, f_simp(lex_simp(r_simp, cs)))
   }
 
-  def lexing_simp(r: Rexp, s: String) =
+  def lexing_simp(r: Rexp, s: String): List[(String, String)] =
     env(lex_simp(r, s.toList))
 
 
-  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else" | "run" | "thread" // | "true" | "false"
-  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~" | "?"
+  val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else"
+  val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString
   val LETTER: Rexp = RANGE(alphabet.toSet)
   val WHITESPACE: Rexp = PLUS(" " | "\n" | "\t" | "\r")

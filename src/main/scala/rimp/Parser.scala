@@ -1,5 +1,7 @@
 package rimp
 
+import scala.collection.mutable
+
 class Parser extends Tokenizer {
   //  --------- RIMP.Parser -------------
 
@@ -10,8 +12,7 @@ class Parser extends Tokenizer {
   type IsSeq[A] = A => Seq[_]
 
   type Tokens = Seq[Token]
-//  type RVar = mutable.Stack[Int]
-  type RArray = Array[RVar]
+  type RArray = mutable.Stack[Array[RVar]]
 
   var while_count: Int = 0
   var if_count: Int = 0
@@ -129,9 +130,7 @@ class Parser extends Tokenizer {
 
   abstract class Exp
   abstract class Stmt extends Exp
-
   abstract class AExp extends Exp
-
   abstract class BExp extends Exp
 
 
@@ -145,16 +144,12 @@ class Parser extends Tokenizer {
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
   case class ArrayWithSize(id: String, size: AExp) extends Stmt
   case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
-  case class AssignThread(id: String, bl: Block) extends Stmt
-  case class RunThread(id: String) extends Stmt
 
   case class Var(s: String) extends AExp
   case class ArrayVar(id: String, index: AExp) extends AExp
   case class Num(i: Int) extends AExp
   case class Aop(o: String, a1: AExp, a2: AExp) extends AExp
 
-//  case object True extends BExp
-//  case object False extends BExp
   case class Bop(o: String, a1: AExp, a2: AExp) extends BExp
   case class Not(b: BExp) extends BExp
 
@@ -189,8 +184,6 @@ class Parser extends Tokenizer {
       (AExp ~ p">" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">", x, z) } ||
       (AExp ~ p">=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop(">=", x, z) } ||
       (AExp ~ p"<=" ~ AExp).map[BExp] { case x ~ _ ~ z => Bop("<=", x, z) } ||
-//      p"true".map[BExp] { _ => True } ||
-//      p"false".map[BExp] { _ => False } ||
       (p"~" ~ BExp).map[BExp] { case _ ~ x => Not(x) } ||
       (p"(" ~ BExp ~ p")").map[BExp] { case _ ~ x ~ _ => x }
 
@@ -208,8 +201,6 @@ class Parser extends Tokenizer {
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
       (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter())} ||
-      (p"thread" ~ IdParser ~ p":=" ~ Block ).map[Stmt] { case _ ~ id ~ _ ~ bl => AssignThread(id, bl) } ||
-      (p"run" ~ p"?" ~ IdParser).map[Stmt] { case _ ~ _ ~ id  => RunThread(id) } ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
 
   // statements
@@ -251,14 +242,10 @@ class Parser extends Tokenizer {
     case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"
     case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2String(index)}] := ${stmt2String(newVal)}"
     case ArrayVar(id, index) => s"$id[${stmt2String(index)}]"
-    case AssignThread(id, bl) => s"thread $id :=\n{${bl.map(x => stmt2String(x)).mkString(";\n")}\n}"
-    case RunThread(id) => s"run ?$id"
     case Var(s) => s"!$s"
     case Num(i) => s"$i"
     case Aop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
     case Bop(o, a1, a2) => s"(${stmt2String(a1)} $o ${stmt2String(a2)})"
-//    case True => "true"
-//    case False => "false"
     case Not(b) => s"~${stmt2String(b)}"
   }
 
@@ -285,14 +272,10 @@ class Parser extends Tokenizer {
     case ArrayWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
     case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2RevStr(index)}] =: ${stmt2RevStr(newVal)}"
     case ArrayVar(id, index) => s"$id[${stmt2RevStr(index)}]"
-    case AssignThread(id, bl) => s"thread $id =:\n{${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
-    case RunThread(id) => s"run ?$id"
     case Var(s) => s"!$s"
     case Num(i) => s"$i"
     case Aop(o, a1, a2) => s"${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)}"
     case Bop(o, a1, a2) => s"(${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)})"
-//    case True => "true"
-//    case False => "false"
     case Not(b) => s"~${stmt2RevStr(b)}"
   }
 
@@ -311,9 +294,6 @@ class Parser extends Tokenizer {
       If(Bop("=", Var(id), Num(1)), revAST(bl1), revAST(bl2), id)
     case While(_, bl, counter) =>
       While(Bop(">", Var(counter.id), Num(0)), revAST(bl), counter)
-    //    case AssignThread (id, bl) =>{
-//
-//    }
     case _ => stmt
   }
 

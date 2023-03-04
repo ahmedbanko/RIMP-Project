@@ -29,7 +29,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     env = env + ("x" -> i.stack( 10))
     assert(i.eval_aexp(i.Var("x"), env) == 10)
     assertThrows[java.util.NoSuchElementException](i.eval_aexp(i.ArrayVar("arr", i.Num(0)), env) == 1)
-    env = env + ("arr" -> Array(i.stack( 0,1),i.stack( 0,2),i.stack( 0,3)))
+    env = env + ("arr" -> mutable.Stack(Array(i.stack( 0,1),i.stack( 0,2),i.stack( 0,3))))
     assert(i.eval_aexp(i.ArrayVar("arr", i.Num(0)), env) == 1)
     assert(i.eval_aexp(i.Aop("+", i.Num(1), i.Num(10)), env) == 11)
     assert(i.eval_aexp(i.Aop("-", i.Num(10), i.Num(5)), env) == 5)
@@ -68,10 +68,10 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assertThrows[java.util.NoSuchElementException](env("arr") == Array(i.stack( 0,1),i.stack( 0,2),i.stack( 0,3)))
     env = i.eval_stmt(i.AssignArr("arr", Array(i.Num(10), i.Num(9), i.Num(8))), env)
 //    assert(env("arr").asInstanceOf[i.RArray] sameElements Array(i.stack( 10),i.stack( 9), i.stack( 8)))
-    val arr = env("arr").asInstanceOf[i.RArray]
+    val arr = env("arr").asInstanceOf[i.RArray].top
     assert(arr.head.top.value == 10)
     env = i.eval_stmt(i.UpdateArrIndex("arr", i.Num(0),i.Num(99)), env)
-    val arr2 = env("arr").asInstanceOf[i.RArray]
+    val arr2 = env("arr").asInstanceOf[i.RArray].top
     assert(arr2.head.top.value != 10 && arr2.head.top.value == 99)
     env = Map() // clear environment
 //    assert(i.eval_stmt(i.If(i.True, List(i.Skip), List(i.Assign("i", i.Num(10))), i.IfResult("id")), env) == env + ("id" -> i.stack(   1)))
@@ -84,15 +84,15 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 //    assert(env("i").asInstanceOf[RVar].top == 0)
     env = Map() // clear environment
     env = i.eval_stmt(i.ArrayWithSize("arr",i.Num(10)), env)
-    assert(env("arr").asInstanceOf[i.RArray].length == 10)
-    assert(env("arr").asInstanceOf[i.RArray](0).top.value == 0)
-    assert(env("arr").asInstanceOf[i.RArray](9).top.value == 0)
-    assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[i.RArray](-1).top.value == 0)
-    assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[i.RArray](10).top.value == 0)
+    assert(env("arr").asInstanceOf[i.RArray].top.length == 10)
+    assert(env("arr").asInstanceOf[i.RArray].top(0).top.value == 0)
+    assert(env("arr").asInstanceOf[i.RArray].top(9).top.value == 0)
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[i.RArray].top(-1).top.value == 0)
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](env("arr").asInstanceOf[i.RArray].top(10).top.value == 0)
     env = i.eval(i.parse("arr := [1,2,3,4,5,6,7,8,9,10]"), env)
     env = i.eval(i.parse("arr[0] := 2"), env)
     env = i.eval(i.parse("arr[1] := 3"), env)
-    val stack_arr = env("arr").asInstanceOf[i.RArray]
+    val stack_arr = env("arr").asInstanceOf[i.RArray].top
     assert(stack_arr(0).size == 3)
     assert(stack_arr(0) == i.stack( 1, 2))
     assert(stack_arr(1).size == 3)
@@ -105,12 +105,12 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test revEval_stmt of AssignArr") {
     val ast = i.parse("arr := [1,2,3,4,5,6,7,8,9,10];arr := [0,0,0,0,0,0,0,0,0,0];arr := [1,2,3,4,5,6,7,8,9,10]")
     env = i.eval(ast, env)
-    val stack_arr = env("arr").asInstanceOf[i.RArray]
-    for (i <- stack_arr.indices) {
-      assert(stack_arr(i).size == 4)
+    val arrs_stack = env("arr").asInstanceOf[i.RArray].top
+    for (i <- arrs_stack.indices) {
+      assert(arrs_stack(i).size == 2)
     }
     env = i.revEval(i.revAST(ast), env)
-    val rev_stack_arr = env("arr").asInstanceOf[i.RArray]
+    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
     for (i <- rev_stack_arr.indices) {
       assert(rev_stack_arr(i).size == 1)
       assert(rev_stack_arr(i).top.value == 0)
@@ -121,13 +121,13 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test revEval_stmt of ArrWithSize") {
     val ast = i.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr := [0,0,0,0,0,0,0,0,0,0];arr := [1,2,3,4,5,6,7,8,9,10]")
     env = i.eval(ast, env)
-    val stack_arr = env("arr").asInstanceOf[i.RArray]
+    val stack_arr = env("arr").asInstanceOf[i.RArray].top
     for (i <- stack_arr.indices) {
-      assert(stack_arr(i).size == 4)
+      assert(stack_arr(i).size == 2)
       assert(stack_arr(i).top.value == i+1)
     }
     env = i.revEval(i.revAST(ast), env)
-    val rev_stack_arr = env("arr").asInstanceOf[i.RArray]
+    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
     for (i <- rev_stack_arr.indices) {
       assert(rev_stack_arr(i).size == 1)
       assert(rev_stack_arr(i).top.value == 0)
@@ -138,7 +138,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test revEval_stmt of UpdateArrIndex") {
     val ast = i.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr[0]:= 11")
     env = i.eval(ast, env)
-    val stack_arr = env("arr").asInstanceOf[i.RArray]
+    val stack_arr = env("arr").asInstanceOf[i.RArray].top
     assert(stack_arr(0).size == 3)
     assert(stack_arr(0).top.value == 11)
     for (i <- 1 until stack_arr.length) {
@@ -146,7 +146,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
       assert(stack_arr(i).top.value == i + 1)
     }
     env = i.revEval(i.revAST(ast), env)
-    val rev_stack_arr = env("arr").asInstanceOf[i.RArray]
+    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
 
     for (i <- rev_stack_arr.indices) {
       assert(rev_stack_arr(i).size == 1)
@@ -217,7 +217,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 
   test("Test creating empty array with size should have a correct size") {
     env = i.eval(i.parse("arr := |10|"))
-    assert(env("arr").asInstanceOf[i.RArray].length == 10)
+    assert(env("arr").asInstanceOf[i.RArray].top.length == 10)
   }
 
   test("Assigning array indexes should work correctly") {
@@ -225,7 +225,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("i").asInstanceOf[RVar].top.value== 10)
     assert(env("ii").asInstanceOf[RVar].top.value== 10)
     assert(env("x").asInstanceOf[RVar].top.value== 9)
-    val arr = env("arr").asInstanceOf[i.RArray]
+    val arr = env("arr").asInstanceOf[i.RArray].top
     for(i <- 0  until 10){
       assert(arr(i).top.value== i)
     }
@@ -233,8 +233,8 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 
   test("Test creating an array with values") {
     env = i.eval(i.parse("arr := [1, 2, 3]"))
-    assert(env("arr").asInstanceOf[i.RArray].length == 3)
-    val arr = env("arr").asInstanceOf[i.RArray]
+    assert(env("arr").asInstanceOf[i.RArray].top.length == 3)
+    val arr = env("arr").asInstanceOf[i.RArray].top
     assert(arr(0).top.value== 1)
     assert(arr(0)== i.stack( 1))
     assert(arr(1).top.value== 2)
@@ -245,7 +245,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 
   test("Test getting value from array indexes") {
     env = i.eval(i.parse("arr := [1, 2, 3]; i0 := arr[0]; i1 := arr[1]; i2 := arr[2]"))
-    assert(env("arr").asInstanceOf[i.RArray].length == 3)
+    assert(env("arr").asInstanceOf[i.RArray].top.length == 3)
     assert(env("i0").asInstanceOf[RVar].top.value== 1)
     assert(env("i1").asInstanceOf[RVar].top.value == 2)
     assert(env("i2").asInstanceOf[RVar].top.value == 3)
@@ -258,7 +258,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     val ast = i.parse(fixtures.EX1)
     env = i.eval(ast)
     env = i.eval(i.parse("arr := [1,2,3]"), env)
-    assert(i.stack_tops(env) == s"Map(fact -> 6, n -> 0, _k1 -> 3, arr -> Array[1, 2, 3])")
+    assert(i.stack_tops(env) == s"(fact -> 6, n -> 0, _k1 -> 3, arr -> Array[1, 2, 3])")
   }
 
 
@@ -266,7 +266,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     val ast = i.parse(fixtures.EX1)
     env = i.eval(ast)
     env = i.revEval(i.revAST(ast), env)
-    assert(i.stack_tops(env) == s"Map(fact -> 0, n -> 0, _k1 -> 0)")
+    assert(i.stack_tops(env) == s"(fact -> 0, n -> 0, _k1 -> 0)")
     val fact_stack = env("fact").asInstanceOf[RVar]
     assert(fact_stack.size == 1)
     val n_stack = env("n").asInstanceOf[RVar]
@@ -329,7 +329,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test forward evaluation of pre-defined reverse_arr_prog") {
     val ast = i.parse(fixtures.reverse_arr_prog)
     val env = i.eval(ast)
-    val arr = env("arr").asInstanceOf[i.RArray]
+    val arr = env("arr").asInstanceOf[i.RArray].top
     assert(arr(0) == i.stack( 1, 5))
     assert(arr(1) == i.stack( 2, 4))
     assert(arr(2) == i.stack(    3))
@@ -338,11 +338,6 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("_k1").asInstanceOf[mutable.Stack[Int]] == mutable.Stack[Int]( 2,0))
   }
 
-//  test("Test forward evaluation of thread_prog") {
-//    val ast = i.parse(fixtures.thread_prog)
-//    val env = i.eval(ast)
-//    println("")
-//  }
 
   test("Test backward evaluation of pre-defined programs") {
     for(p <- fixtures.allExamples){
@@ -358,11 +353,16 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   }
 
 
-  def stackOnlyHasZero(stack: Any): Boolean = stack match {
-    case s: RVar => s.size == 1 && s.top.value == 0
-    case s: mutable.Stack[Int] => s.size == 1 && s.top == 0
-    case s: i.RArray => s.forall(i => i.size == 1 && i.top.value == 0)
-    case _ => throw new RuntimeException("stackOnlyHasZero function can only check RVar and RArray types")
+  def stackOnlyHasZero(stack: Any): Boolean = {
+    val stream = new java.io.ByteArrayOutputStream()
+
+    stack match {
+      case s: RVar => s.size == 1 && s.top.value == 0
+      case s: mutable.Stack[_] if s.head.isInstanceOf[Int] => s.size == 1 && s.head == 0
+      case s: mutable.Stack[_] if s.head.isInstanceOf[Array[RVar]] =>
+         s.head.asInstanceOf[Array[RVar]].forall(stackOnlyHasZero)
+      case _ => throw new RuntimeException("stackOnlyHasZero function received unsupported type")
+    }
   }
   
 }

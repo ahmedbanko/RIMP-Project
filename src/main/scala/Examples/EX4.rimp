@@ -1,0 +1,11 @@
+x := 13;
+factor := 2;
+isprime := 1;
+limit := !x / 2 + 1;
+while !factor < !limit do {
+  r := !x;
+  (while !r > !factor - 1 do
+      r := !r - !factor);
+  (if !r = 0 then isprime := 0 else skip);
+  factor := !factor + 1
+}

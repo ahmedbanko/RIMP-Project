@@ -1,0 +1,11 @@
+arr := |10|;
+i := 0;
+while (!i < 10) do {
+    arr[!i] := !i;
+    i := !i + 1
+};
+ii := 0;
+while (!ii < 10) do {
+    x := arr[!ii];
+    ii := !ii + 1
+}

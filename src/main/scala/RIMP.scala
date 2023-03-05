@@ -1,8 +1,8 @@
-
+import rimp.{Interpreter, Parser}
 
 object RIMP extends App {
-//  val p = new Parser()
-//  val i = new Interpreter()
+  val p = new Parser()
+  val i = new Interpreter()
   val prog =
     """a := 10;
        a := 9;
@@ -168,17 +168,18 @@ object RIMP extends App {
            };
            run ?t2
      """
-//  val p = i.parse(stacks)
+//  val ast = i.parse(exampleProg5)
+
 ////  p.foreach(println)
 ////  println("------------")
 //  val rp = i.revAST(p)
 ////  println(i.ast2Code(p))
 //////  println("------------")
 //////  println(i.revAst2Code(p))
-//  val env = i.eval(p)
+//  val env = i.eval(ast)
 //  println(i.stack_tops(env))
 //////  println(rp)
-//  val revenv = i.revEval(rp, env)
+//  val revenv = i.revEval(ast, env)
 //  println(i.stack_tops(revenv))
 ////
 ////  println(i.stack(1, 2))
@@ -189,39 +190,47 @@ object RIMP extends App {
 //  //  i.evalBySteps(p, Map())
 
 
-//  EX2
+//  EX2.rimp
 //  (7, +(-7, +(-7, +(-28, +(49, +(0, 0)))))
 //  (14, +(-7, +(-28, +(49, +(0, 0)))))
 //  (21, +(-28, +(49, +(0, 0))))
 //  (49, +(49, +(0, 0)))
 //  (0, +(0, 0))
 
-
+  import scala.io.Source
 
   println("Welcome to RIMP Interpreter!")
   println("Type help to see possible commands and options.")
   var exit = false
   while (!exit) {
     val input = scala.io.StdIn.readLine()
-    val parts = input.split("\\s+")
-    val command = parts.head
-    val parameters = parts.tail
-    print(s"command: $command ")
-    command match {
-      case "translate" => translate(parameters.toList)
-      case "reverse" => reverse(parameters.toList)
-      case "evaluate" => evaluate(parameters.toList)
-      case "invert" => invert(parameters.toList)
-      case "help" => help(parameters.toList)
-      case "exit" => exit = true
-      case _ => println(s"Unknown command: $command")
+    if (input.isEmpty) println("Error: Please enter a command or type 'help' for available options.")
+    else {
+      val parts = input.split("\\s+")
+      val command = parts.head
+      val parameters = parts.tail
+      command match {
+        case "translate" => translate(parameters.toList)
+        case "reverse" => reverse(parameters.toList)
+        case "evaluate" => evaluate(parameters.toList)
+        case "invert" => invert(parameters.toList)
+        case "help" => help(parameters.toList)
+        case "exit" => exit = true
+        case _ => println(s"Unknown command: $command")
+      }
     }
+    p.resetCounters
   }
 
 
   def translate(parameters: List[String]) = {
-    parameters.foreach(x => print(s"$x "))
-    println()
+    if(parameters.isEmpty)
+      println("Error: please type a file name e.g. 'EX1'")
+    else {
+      val code = readFile(parameters.head)
+      if (code.startsWith("_Error")) println(code.tail)
+      else println(p.translate(code))
+    }
   }
 
   def reverse(parameters: List[String]) = {
@@ -241,6 +250,20 @@ object RIMP extends App {
   def help(parameters: List[String]) = {
     parameters.foreach(x => print(s"$x "))
     println()
+  }
+
+  def readFile(name: String): String = {
+    val filename = s"src/main/scala/Examples/$name.rimp"
+    try {
+      val source = Source.fromFile(filename)
+      val output = source.mkString
+      source.close()
+      if(output.isEmpty) "_Error reading file: file is empty"
+      else output
+    } catch {
+      case ex: Exception =>
+        s"_Error reading file: ${ex.getMessage}"
+    }
   }
 
 }

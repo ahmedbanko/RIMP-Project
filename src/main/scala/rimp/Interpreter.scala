@@ -104,7 +104,7 @@ class Interpreter extends Parser {
     }.mkString("(", ", ", ")")
   }
 
-  def revEval_stmt(s: Stmt, env: Env): Env =
+  private def revEval_stmt(s: Stmt, env: Env): Env =
     s match {
       case Skip => env
       case Assign(x, _) =>
@@ -127,22 +127,27 @@ class Interpreter extends Parser {
       case If(_, bl1, bl2, if_id) =>
         val stack = env(if_id).asInstanceOf[mutable.Stack[Int]]
         if (stack.pop == 1) {
-          revEval(bl1, env + (if_id -> stack))
+          revEval_bl(bl1, env + (if_id -> stack))
         } else {
-          revEval(bl2, env + (if_id -> stack))
+          revEval_bl(bl2, env + (if_id -> stack))
         }
       case While(b, bl, counter) =>
         val c_stack = env(counter.id).asInstanceOf[mutable.Stack[Int]]
         val c_top = c_stack.top
         if (c_top > 0) {
-          revEval_stmt(While(b, bl, counter), revEval(bl, env + (counter.id -> update_stack_top(c_stack, c_top-1))))
+          revEval_stmt(While(b, bl, counter), revEval_bl(bl, env + (counter.id -> update_stack_top(c_stack, c_top-1))))
         } else c_stack.pop
         env
     }
 
-  def revEval(bl: Block, env: Env): Env = bl match {
+  private def revEval_bl(bl: Block, env: Env): Env = bl match {
     case Nil => env
-    case s :: bl => revEval(bl, revEval_stmt(s, env))
+    case s :: bl => revEval_bl(bl, revEval_stmt(s, env))
+  }
+
+  def revEval(bl: Block, env: Env): Env = {
+    val rev_ast = revAST(bl)
+    revEval_bl(rev_ast, env)
   }
 
 }

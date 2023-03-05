@@ -124,7 +124,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     for (i <- arrs_stack.indices) {
       assert(arrs_stack(i).size == 2)
     }
-    env = i.revEval(i.revAST(ast), env)
+    env = i.revEval(ast, env)
     val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
     for (i <- rev_stack_arr.indices) {
       assert(rev_stack_arr(i).size == 1)
@@ -141,7 +141,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
       assert(stack_arr(i).size == 2)
       assert(stack_arr(i).top.value == i+1)
     }
-    env = i.revEval(i.revAST(ast), env)
+    env = i.revEval(ast, env)
     val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
     for (i <- rev_stack_arr.indices) {
       assert(rev_stack_arr(i).size == 1)
@@ -160,7 +160,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
       assert(stack_arr(i).size == 2)
       assert(stack_arr(i).top.value == i + 1)
     }
-    env = i.revEval(i.revAST(ast), env)
+    env = i.revEval(ast, env)
     val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
 
     for (i <- rev_stack_arr.indices) {
@@ -172,7 +172,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 
   test("Test revEval_stmt of UpdateArrIndex with different arr assigned to different arrays") {
     val ast = i.parse("arr := [1,2,3,4,5,6,7,8,9,10];arr := [1,2,3,4,5];arr[0] := arr[0] * 2; arr[1] := arr[1] * 2; arr[2] := arr[2] * 2")
-    val rev_ast = i.revAST(ast)
+    val rev_ast = ast
     env = i.eval(ast, env)
     env = i.revEval(rev_ast, env)
     val arrs_stack: i.RArray = env("arr").asInstanceOf[i.RArray]
@@ -192,7 +192,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("_if1").asInstanceOf[mutable.Stack[Int]].size == 2)
     assert(env("_if1").asInstanceOf[mutable.Stack[Int]] == mutable.Stack[Int](1, 0))
 
-    env = i.revEval(i.revAST(ast), env)
+    env = i.revEval(ast, env)
     assert(env("x").asInstanceOf[RVar].size == 1)
     assert(env("x").asInstanceOf[RVar].top.value== 0)
     assert(env("y").asInstanceOf[RVar].size == 1)
@@ -212,7 +212,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("_if1").asInstanceOf[mutable.Stack[Int]].size == 2)
     assert(env("_if1").asInstanceOf[mutable.Stack[Int]] == mutable.Stack[Int](0, 0))
 
-    env = i.revEval(i.revAST(ast), env)
+    env = i.revEval(ast, env)
     assert(env("x").asInstanceOf[RVar].size == 1)
     assert(env("x").asInstanceOf[RVar].top.value== 0)
     assert(env("y").asInstanceOf[RVar].size == 1)
@@ -293,7 +293,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   test("Test revEval function") {
     val ast = i.parse(fixtures.EX1)
     env = i.eval(ast)
-    env = i.revEval(i.revAST(ast), env)
+    env = i.revEval(ast, env)
     assert(i.stack_tops(env) == s"(fact -> 0, n -> 0, _k1 -> 0)")
     val fact_stack = env("fact").asInstanceOf[RVar]
     assert(fact_stack.size == 1)
@@ -374,7 +374,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
       val env = i.eval(ast)
 
       // Backward evaluation
-      val rev_ast = i.revAST(ast)
+      val rev_ast = ast
       val rev_env = i.revEval(rev_ast, env)
       rev_env.values.foreach(s => assert(stackOnlyHasZero(s)))
     }

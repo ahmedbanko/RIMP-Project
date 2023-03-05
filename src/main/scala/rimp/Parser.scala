@@ -227,17 +227,16 @@ class Parser extends Tokenizer {
     injectIds(p)
   }
 
-// TODO: check it prints correctly
   private def stmt2String(stmt: Exp): String = stmt match {
     case Skip => "skip"
     case If(a, bl1, bl2, if_id) =>
-      val ifId = if_id.split("_")(1)
+      val ifId = if_id.tail(2)
       s"${if_id} := 0;\nif-$ifId ${stmt2String(a)} then {\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
     case While(b, bl, counter) =>
-      val whileId = counter.id.split("_")(1)
+      val whileId = counter.id.tail.tail
       s"${counter.id} := ${counter.count};\nwhile-$whileId ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
     case Assign(s, a) => s"$s := ${stmt2String(a)}"
-    case AssignArr(id, values) => s"$id := ${values.mkString("[", ", ", "]")}"
+    case AssignArr(id, values) => s"$id := ${values.map(stmt2String).mkString("[", ", ", "]")}"
     case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"
     case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2String(index)}] := ${stmt2String(newVal)}"
     case ArrayVar(id, index) => s"$id[${stmt2String(index)}]"
@@ -297,16 +296,17 @@ class Parser extends Tokenizer {
     case _ => stmt
   }
 
-  def revAST(stmts: List[Stmt], output: List[Stmt] = List()): List[Stmt] = stmts match {
+   protected def revAST(stmts: List[Stmt], output: List[Stmt] = List()): List[Stmt] = stmts match {
     case Nil => output
     case hd::tail => revAST(tail, output):+revStmt(hd)
   }
 
-  def revAst2Code(ast: List[Stmt]) : String = {
+  def translateRev(ast: List[Stmt]) : String = {
     stmts2RevStr(ast.reverse).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
   }
 
-  def ast2Code(ast: List[Stmt]): String = {
+  def translate(code: String): String = {
+    val ast = parse(code)
     stmts2String(ast).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
   }
 
@@ -315,5 +315,10 @@ class Parser extends Tokenizer {
     val out = new RVar()
     vars.foreach(x => out.push(x))
     out
+  }
+
+  def resetCounters: Unit = {
+     while_count = 0
+     if_count = 0
   }
 }

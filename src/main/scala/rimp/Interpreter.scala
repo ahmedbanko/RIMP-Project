@@ -1,11 +1,11 @@
 package rimp
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 class Interpreter extends Parser {
 
   // ------------ RIMP.Interpreter -------------------
-
 
   // an interpreter for the RIMP language
   type Env = Map[String, Any]
@@ -41,55 +41,74 @@ class Interpreter extends Parser {
     c_stack.push(i)
   }
 
-  def eval_stmt(s: Stmt, env: Env): Env =
+  def eval_stmt(s: Stmt, env: Env, printSteps: Boolean = false): Env =
     s match {
-      case Skip => env
+      case Skip =>
+        if(printSteps) println(env)
+        env
       case Assign(x, a) =>
         val old_stack = env.getOrElse(x, stack())
-        env + (x -> old_stack.asInstanceOf[RVar].push(eval_aexp(a, env)))
+        val out = env + (x -> old_stack.asInstanceOf[RVar].push(eval_aexp(a, env)))
+        if(printSteps) println(out)
+        out
       case AssignArr(id, values) =>
         val old_stack = env.getOrElse(id, mutable.Stack(Array.fill(values.length)(stack()))).asInstanceOf[RArray]
         old_stack.push(values.map(v => stack(eval_aexp(v, env))))
-        env + (id -> old_stack)
+        val out = env + (id -> old_stack)
+        if(printSteps) println(out)
+        out
       case ArrayWithSize(id, size) =>
         val length = eval_aexp(size, env)
         val old_stack = env.getOrElse(id, mutable.Stack(Array.fill(length)(stack()))).asInstanceOf[RArray]
         old_stack.push(Array.fill(length)(stack()))
-        env + (id -> old_stack)
+        val out = env + (id -> old_stack)
+        if(printSteps) println(out)
+        out
       case UpdateArrIndex(id, index, newVal) =>
         val newVal_eval = eval_aexp(newVal, env)
         val index_eval = eval_aexp(index, env)
         val arr = env(id).asInstanceOf[RArray]
         arr.top(index_eval).push(newVal_eval)
+        if(printSteps) println(env)
         env
       case If(b, bl1, bl2, if_id) =>
         val stack = env.getOrElse(if_id, mutable.Stack[Int](0)).asInstanceOf[mutable.Stack[Int]]
         if (eval_bexp(b, env)) {
           stack.push(1) // represents true
-          eval_bl(bl1, env + (if_id -> stack))
+         val out = eval_bl(bl1, env + (if_id -> stack), printSteps)
+          if(printSteps) println(out)
+          out
         } else {
           stack.push(0) // represents false
-          eval_bl(bl2, env + (if_id -> stack))
+          val out = eval_bl(bl2, env + (if_id -> stack), printSteps)
+          if(printSteps) println(out)
+          out
         }
+
       case While(b, bl, counter) =>
         val c_stack = env.getOrElse(counter.id, mutable.Stack[Int](0)).asInstanceOf[mutable.Stack[Int]]
-        if(counter.count == 0){
+        if (counter.count == 0) {
           c_stack.push(0)
         }
         if (eval_bexp(b, env)) {
-          eval_stmt(While(b, bl, Counter(counter.id, counter.count+1)), eval_bl(bl, env + (counter.id -> update_stack_top(c_stack, counter.count+1))))
+            eval_stmt(While(b, bl, Counter(counter.id, counter.count + 1)), eval_bl(bl, env + (counter.id -> update_stack_top(c_stack, counter.count + 1)), printSteps), printSteps)
         }
         else {
+          if(printSteps) println(env)
           env
         }
     }
 
-  def eval_bl(bl: Block, env: Env): Env = bl match {
+  def eval_bl(bl: Block, env: Env, printSteps: Boolean = false): Env = bl match {
     case Nil => env
-    case s :: bl => eval_bl(bl, eval_stmt(s, env))
+    case s :: bl =>
+     eval_bl(bl, eval_stmt(s, env, printSteps), printSteps)
   }
 
-  def eval(bl: Block, env: Env = Map()): Env = eval_bl(bl, env)
+  def eval(bl: Block, env: Env = Map(), printSteps: Boolean = false): Env = {
+    if(printSteps) println(env)
+    eval_bl(bl, env, printSteps)
+  }
 
   def stack_tops(env: Env): String = {
     env.map { case (key, value) =>
@@ -104,50 +123,65 @@ class Interpreter extends Parser {
     }.mkString("(", ", ", ")")
   }
 
-  private def revEval_stmt(s: Stmt, env: Env): Env =
+  private def revEval_stmt(s: Stmt, env: Env, printSteps: Boolean): Env =
     s match {
-      case Skip => env
+      case Skip =>
+        if(printSteps) println(env)
+        env
       case Assign(x, _) =>
         val old_stack = env(x).asInstanceOf[RVar]
         old_stack.pop
-        env + (x -> old_stack)
+        val out = env + (x -> old_stack)
+        if(printSteps) println(out)
+        out
       case AssignArr(id, _) =>
         val old_stack = env(id).asInstanceOf[RArray]
         old_stack.pop()
-        env + (id -> old_stack)
+        val out = env + (id -> old_stack)
+        if (printSteps) println(out)
+        out
       case ArrayWithSize(id, _) =>
         val old_stack = env(id).asInstanceOf[RArray]
         old_stack.pop()
-        env + (id -> old_stack)
+        val out = env + (id -> old_stack)
+        if (printSteps) println(out)
+        out
       case UpdateArrIndex(id, index, _) =>
         val index_eval = eval_aexp(index, env)
         val arr = env(id).asInstanceOf[RArray].top
         arr(index_eval).pop
+        if (printSteps) println(env)
         env
       case If(_, bl1, bl2, if_id) =>
         val stack = env(if_id).asInstanceOf[mutable.Stack[Int]]
         if (stack.pop == 1) {
-          revEval_bl(bl1, env + (if_id -> stack))
+          val out = revEval_bl(bl1, env + (if_id -> stack), printSteps)
+          if (printSteps) println(out)
+          out
         } else {
-          revEval_bl(bl2, env + (if_id -> stack))
+          val out = revEval_bl(bl2, env + (if_id -> stack), printSteps)
+          if (printSteps) println(out)
+          out
         }
       case While(b, bl, counter) =>
         val c_stack = env(counter.id).asInstanceOf[mutable.Stack[Int]]
         val c_top = c_stack.top
         if (c_top > 0) {
-          revEval_stmt(While(b, bl, counter), revEval_bl(bl, env + (counter.id -> update_stack_top(c_stack, c_top-1))))
+          revEval_stmt(While(b, bl, counter), revEval_bl(bl, env + (counter.id -> update_stack_top(c_stack, c_top-1)), printSteps), printSteps)
         } else c_stack.pop
+        if (printSteps) println(env)
         env
     }
 
-  private def revEval_bl(bl: Block, env: Env): Env = bl match {
+  @tailrec
+  private def revEval_bl(bl: Block, env: Env, printSteps: Boolean): Env = bl match {
     case Nil => env
-    case s :: bl => revEval_bl(bl, revEval_stmt(s, env))
+    case s :: bl => revEval_bl(bl, revEval_stmt(s, env, printSteps), printSteps: Boolean)
   }
 
-  def revEval(bl: Block, env: Env): Env = {
+  def revEval(bl: Block, env: Env, printSteps: Boolean = false): Env = {
     val rev_ast = revAST(bl)
-    revEval_bl(rev_ast, env)
+    revEval_bl(rev_ast, env, printSteps)
   }
 
 }

@@ -266,7 +266,7 @@ class Parser extends Tokenizer {
       val whileId = counter.id.tail.tail
       s"while-$whileId (!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"
     case Assign(s, a) => s"$s =: ${stmt2RevStr(a)}"
-    case AssignArr(id, values) => s"$id =: ${values.mkString("[", ", ", "]")}"
+    case AssignArr(id, values) => s"$id =: ${values.map(stmt2RevStr).mkString("[", ", ", "]")}"
     case ArrayWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
     case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2RevStr(index)}] =: ${stmt2RevStr(newVal)}"
     case ArrayVar(id, index) => s"$id[${stmt2RevStr(index)}]"

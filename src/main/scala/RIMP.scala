@@ -12,12 +12,12 @@ object RIMP extends App {
     else {
       val parts = input.split("\\s+")
       val command = parts.head
-      val parameters = parts.tail.toList
+      val args = parts.tail.toList
         command match {
-          case "translate" => translate(parameters)
-          case "reverse" => reverse(parameters)
-          case "evaluate" => evaluate(parameters)
-          case "invert" => invert(parameters)
+          case "translate" => translate(args)
+          case "invert" => invert(args)
+          case "evaluate" => evaluate(args)
+          case "reverse" => reverse(args)
           case "help" => help()
           case "exit" => exit = true
           case _ => println(s"Unknown command: $command")
@@ -27,59 +27,80 @@ object RIMP extends App {
   }
 
 
-  def translate(parameters: List[String]) = {
-    if (parameters.isEmpty)
+  def translate(args: List[String]): Unit = {
+    if (args.isEmpty)
       println("Error: please type a file name e.g. 'EX1'")
     else {
-      val code = readFile(parameters.head)
+      val code = readFile(args.head)
       if (code.startsWith("_Error")) println(code.tail)
       else println(i.translate(code))
     }
   }
 
-  def invert(parameters: List[String]) = {
-    if (parameters.isEmpty)
+  def invert(args: List[String]): Unit = {
+    if (args.isEmpty)
       println("Error: please type a file name e.g. 'EX1'")
     else {
-      val code = readFile(parameters.head)
+      val code = readFile(args.head)
       if (code.startsWith("_Error")) println(code.tail)
-      else println(i.translate(code))
+      else println(i.translateRev(code))
     }
   }
 
-  def evaluate(parameters: List[String]) = {
-    if (parameters.isEmpty)
+  def getOption(args: List[String]): String = args match {
+    case Nil => ""
+    case "--steps"::_ => "steps"
+    case _ => "_Error: available options is: '--steps'"
+  }
+
+  def evaluate(args: List[String]): Unit = {
+    if (args.isEmpty)
       println("Error: please type a file name e.g. 'EX1'")
     else {
-      val code = readFile(parameters.head)
-      //    val option = parameters(1)
+      val code = readFile(args.head)
       if (code.startsWith("_Error")) println(code.tail)
       else {
+        val option = getOption(args.tail)
         val ast = i.parse(code)
-        val env = i.eval(ast)
-        println(i.stack_tops(env))
+
+          if (option.startsWith("_Error")){
+          println(option.tail)
+        }else if (option.equals("steps")){
+          val env = i.eval(ast, printSteps = true)
+          println(i.stack_tops(env))
+        }else{
+          val env = i.eval(ast)
+          println(i.stack_tops(env))
+        }
       }
     }
   }
 
-  def reverse(parameters: List[String]) = {
-    if (parameters.isEmpty)
+  def reverse(args: List[String]): Unit = {
+    if (args.isEmpty)
       println("Error: please type a file name e.g. 'EX1'")
     else {
-      val code = readFile(parameters.head)
-      //    val option = parameters(1)
+      val code = readFile(args.head)
       if (code.startsWith("_Error")) println(code.tail)
       else {
+        val option = getOption(args.tail)
         val ast = i.parse(code)
         val env = i.eval(ast)
-        val rev_env = i.revEval(ast, env)
-        println(i.stack_tops(rev_env))
+
+       if (option.startsWith("_Error")) {
+          println(option.tail)
+        } else if (option.equals("steps")) {
+         val rev_env = i.revEval(ast, env, printSteps = true)
+         println(i.stack_tops(rev_env))
+        } else {
+         val rev_env = i.revEval(ast, env)
+         println(i.stack_tops(rev_env))
+        }
+
       }
-
-
     }
   }
-  def help() = {
+  def help(): Unit = {
 
   }
 

@@ -209,14 +209,18 @@ object RIMP extends App {
       val parts = input.split("\\s+")
       val command = parts.head
       val parameters = parts.tail
-      command match {
-        case "translate" => translate(parameters.toList)
-        case "reverse" => reverse(parameters.toList)
-        case "evaluate" => evaluate(parameters.toList)
-        case "invert" => invert(parameters.toList)
-        case "help" => help(parameters.toList)
-        case "exit" => exit = true
-        case _ => println(s"Unknown command: $command")
+      if (parameters.isEmpty)
+        println("Error: please type a file name e.g. 'EX1'")
+      else {
+        command match {
+          case "translate" => translate(parameters.toList)
+          case "reverse" => reverse(parameters.toList)
+          case "evaluate" => evaluate(parameters.toList)
+          case "invert" => invert(parameters.toList)
+          case "help" => help(parameters.toList)
+          case "exit" => exit = true
+          case _ => println(s"Unknown command: $command")
+        }
       }
     }
     p.resetCounters
@@ -224,18 +228,15 @@ object RIMP extends App {
 
 
   def translate(parameters: List[String]) = {
-    if(parameters.isEmpty)
-      println("Error: please type a file name e.g. 'EX1'")
-    else {
       val code = readFile(parameters.head)
       if (code.startsWith("_Error")) println(code.tail)
       else println(p.translate(code))
-    }
   }
 
   def reverse(parameters: List[String]) = {
-    parameters.foreach(x => print(s"$x "))
-    println()
+      val code = readFile(parameters.head)
+      if (code.startsWith("_Error")) println(code.tail)
+      else println(p.translateRev(code))
   }
 
   def evaluate(parameters: List[String]) = {

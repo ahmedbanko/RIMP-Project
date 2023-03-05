@@ -231,7 +231,7 @@ class Parser extends Tokenizer {
     case Skip => "skip"
     case If(a, bl1, bl2, if_id) =>
       val ifId = if_id.tail(2)
-      s"${if_id} := 0;\nif-$ifId ${stmt2String(a)} then {\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
+      s"$if_id := 0;\nif-$ifId ${stmt2String(a)} then {\n$if_id := 1;\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n$if_id := 0;\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
     case While(b, bl, counter) =>
       val whileId = counter.id.tail.tail
       s"${counter.id} := ${counter.count};\nwhile-$whileId ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
@@ -257,14 +257,13 @@ class Parser extends Tokenizer {
       }
   }
 
-  // TODO: check it prints correctly
   private def stmt2RevStr(stmt: Exp): String = stmt match {
     case Skip => "skip"
     case If(_, bl1, bl2, if_id) =>
-      val ifId = if_id.split("_")(1)
-      s"if-$ifId (!$if_id) then {\n${bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n} else {\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
+      val ifId = if_id.tail(2)
+      s"if-$ifId (!$if_id = 1) then {\n$if_id =: 1;\n${bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n} else {\n$if_id =: 0;\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
     case While(_, bl, counter) =>
-      val whileId = counter.id.split("_")(1)
+      val whileId = counter.id.tail.tail
       s"while-$whileId (!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"
     case Assign(s, a) => s"$s =: ${stmt2RevStr(a)}"
     case AssignArr(id, values) => s"$id =: ${values.mkString("[", ", ", "]")}"
@@ -301,7 +300,8 @@ class Parser extends Tokenizer {
     case hd::tail => revAST(tail, output):+revStmt(hd)
   }
 
-  def translateRev(ast: List[Stmt]) : String = {
+  def translateRev(code: String) : String = {
+    val ast = parse(code)
     stmts2RevStr(ast.reverse).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
   }
 

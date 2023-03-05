@@ -295,7 +295,7 @@ class Parser extends Tokenizer {
     case _ => stmt
   }
 
-   protected def revAST(stmts: List[Stmt], output: List[Stmt] = List()): List[Stmt] = stmts match {
+  def revAST(stmts: List[Stmt], output: List[Stmt] = List()): List[Stmt] = stmts match {
     case Nil => output
     case hd::tail => revAST(tail, output):+revStmt(hd)
   }

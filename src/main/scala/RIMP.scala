@@ -101,7 +101,12 @@ object RIMP extends App {
     }
   }
   def help(): Unit = {
-
+    println("Type one of the following commands in the format COMMAND <file_name> --OPTION")
+    println("'translate' prints the given code with additional variables/counters to it.")
+    println("'invert' prints reversed representation of the given code.")
+    println("'evaluate' executes the code in the forward direction and prints the final values of all variables.")
+    println("'reverse' executes the code in the backward direction and prints the final values of all variables.")
+    println("NOTE: the commands 'evaluate' & 'reverse' can run with the option '--steps' which prints the runtime values.")
   }
 
 

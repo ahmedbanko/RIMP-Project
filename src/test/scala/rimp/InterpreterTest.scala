@@ -277,7 +277,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     assert(env("i1").asInstanceOf[RVar].top.value == 2)
     assert(env("i2").asInstanceOf[RVar].top.value == 3)
     assertThrows[java.lang.ArrayIndexOutOfBoundsException](i.eval(i.parse("i3 := arr[3]"), env))
-    assertThrows[java.lang.ArrayIndexOutOfBoundsException](i.eval(i.parse("i := arr[1-2]"), env))
+    assertThrows[java.lang.ArrayIndexOutOfBoundsException](i.eval(i.parse("i := arr[1- 2]"), env))
   }
 
 

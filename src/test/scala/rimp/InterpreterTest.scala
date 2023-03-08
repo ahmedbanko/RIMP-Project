@@ -285,7 +285,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     val ast = i.parse(fixtures.EX1)
     env = i.eval(ast)
     env = i.eval(i.parse("arr := [1,2,3]"), env)
-    assert(i.stack_tops(env) == s"(fact -> 6, n -> 0, _k1 -> 3, arr -> Array[1, 2, 3])")
+    assert(i.stack_tops(env) == s"Map(fact -> 6, n -> 0, _k1 -> 3, arr -> Array[1, 2, 3])")
   }
 
 
@@ -293,7 +293,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     val ast = i.parse(fixtures.EX1)
     env = i.eval(ast)
     env = i.revEval(ast, env)
-    assert(i.stack_tops(env) == s"(fact -> 0, n -> 0, _k1 -> 0)")
+    assert(i.stack_tops(env) == s"Map(fact -> 0, n -> 0, _k1 -> 0)")
     val fact_stack = env("fact").asInstanceOf[RVar]
     assert(fact_stack.size == 1)
     val n_stack = env("n").asInstanceOf[RVar]

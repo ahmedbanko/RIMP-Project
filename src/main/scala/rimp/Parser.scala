@@ -141,8 +141,13 @@ class Parser extends Tokenizer {
   case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
-  case class ArrayWithSize(id: String, size: AExp) extends Stmt
+  case class AssignNewArrWithSize(id: String, size: AExp) extends Stmt
   case class UpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
+
+  case class RevAssign(s: String, a: AExp) extends Stmt
+  case class RevAssignArr(id: String, values: Array[AExp]) extends Stmt
+  case class RevAssignNewArrWithSize(id: String, size: AExp) extends Stmt
+  case class RevUpdateArrIndex(id: String, index: AExp, newVal: AExp) extends Stmt
 
   case class Var(s: String) extends AExp
   case class ArrayVar(id: String, index: AExp) extends AExp
@@ -193,7 +198,7 @@ class Parser extends Tokenizer {
       (IdParser ~ p":=" ~ AExp).map[Stmt] { case x ~ _ ~ z => Assign(x, z) } ||
       (IdParser ~ p":=" ~ ArrBlock).map[Stmt] { case id ~ _ ~ values => AssignArr(id, values) } ||
       (IdParser ~ p":=" ~ BarParser ~ AExp ~ BarParser).map[Stmt] {
-        case id ~ _ ~ _ ~ size ~ _  => ArrayWithSize(id, size)} ||
+        case id ~ _ ~ _ ~ size ~ _  => AssignNewArrWithSize(id, size)} ||
       (IdParser ~ p"[" ~ AExp ~ p"]" ~ p":=" ~ AExp).map[Stmt] {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
@@ -215,16 +220,32 @@ class Parser extends Tokenizer {
 
   def injectIds(b: Block): List[Stmt] = {
     b.map {
-      case w: While => w.copy(b = w.b, counter = Counter(id = whileID()), bl = injectIds(w.bl))
+      case w: While =>
+        val w_id = whileID()
+        w.copy(b = w.b, counter = Counter(id = w_id), bl = injectIds(w.bl))
       case i: If => i.copy(a = i.a, id = ifID(), bl1 = injectIds(i.bl1), bl2 = injectIds(i.bl2))
       case other => other
     }
   }
 
+
+  def addVars(input: Block, output: Block= List()): Block = input match {
+    case Nil => output
+    case While(b, bl, counter) :: tail =>
+      val out = output:+Assign(counter.id, Num(0)):+ While(b, addVars(bl) :+ Assign(counter.id, Aop("+", Var(counter.id), Num(1))), counter)
+      addVars(tail, out)
+
+    case If(b, bl1, bl2, id) :: tail =>
+      val out = (Assign(id, Num(0)) ::output) :+ If(b, addVars(bl1):+Assign(id, Num(1)), addVars(bl2):+Assign(id, Num(0)), id)
+      addVars(tail, out)
+    case hd::tail => addVars(tail, output:+hd)
+  }
+
   // helper function to parse programs (filters whitespaces and comments)
   def parse(program: String): List[Stmt]  = {
     val p = Stmts.parse_all(tokenize(program)).head
-    injectIds(p)
+    val p_with_ids = injectIds(p)
+    addVars(p_with_ids)
   }
 
   private def stmt2String(stmt: Exp): String = stmt match {
@@ -237,7 +258,7 @@ class Parser extends Tokenizer {
       s"${counter.id} := ${counter.count};\nwhile-$whileId ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
     case Assign(s, a) => s"$s := ${stmt2String(a)}"
     case AssignArr(id, values) => s"$id := ${values.map(stmt2String).mkString("[", ", ", "]")}"
-    case ArrayWithSize(id, size) => s"$id := |${stmt2String(size)}|"
+    case AssignNewArrWithSize(id, size) => s"$id := |${stmt2String(size)}|"
     case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2String(index)}] := ${stmt2String(newVal)}"
     case ArrayVar(id, index) => s"$id[${stmt2String(index)}]"
     case Var(s) => s"!$s"
@@ -267,7 +288,7 @@ class Parser extends Tokenizer {
       s"while-$whileId (!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"
     case Assign(s, a) => s"$s =: ${stmt2RevStr(a)}"
     case AssignArr(id, values) => s"$id =: ${values.map(stmt2RevStr).mkString("[", ", ", "]")}"
-    case ArrayWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
+    case AssignNewArrWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
     case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2RevStr(index)}] =: ${stmt2RevStr(newVal)}"
     case ArrayVar(id, index) => s"$id[${stmt2RevStr(index)}]"
     case Var(s) => s"!$s"
@@ -288,6 +309,10 @@ class Parser extends Tokenizer {
   }
 
   private def revStmt(stmt: Stmt) = stmt match {
+    case Assign(s, a) => RevAssign(s, a)
+    case AssignArr(id, values) => RevAssignArr(id, values)
+    case AssignNewArrWithSize(id, size) => RevAssignNewArrWithSize(id, size)
+    case UpdateArrIndex(id, index, newValue) => RevUpdateArrIndex(id, index, newValue)
     case If (_, bl1, bl2, id) =>
       If(Bop("=", Var(id), Num(1)), revAST(bl1), revAST(bl2), id)
     case While(_, bl, counter) =>

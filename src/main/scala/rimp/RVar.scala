@@ -32,7 +32,7 @@ class RVar(var root_in: Node = new Node(0)) {
 
   override def toString: String = {
     if (stackSize > 1)
-    s"(${root.value}, +(${root.left.get.toString}, ${root.right.get.toString})"
+    s"(${root.value}, +(${root.left.get.toString}, ${root.right.get.toString}))"
     else if (stackSize == 1)s"(${root.value}, +(0, 0))"
     else "None"
   }

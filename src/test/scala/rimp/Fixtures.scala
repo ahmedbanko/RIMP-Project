@@ -110,24 +110,6 @@ class Fixtures {
       }
      """
 
-  val thread_prog =
-    """thread t1 := {
-        arr := [1, 2, 3, 4, 5];
-          arr_len := 5;
-          left := 0;
-          right := !arr_len - 1;
-          while(!left < !right) do {
-             tmp_left := arr[!left];
-             tmp_right := arr[!right];
-             arr[!right] := !tmp_left;
-              arr[!left] := !tmp_right;
-             left := !left + 1;
-             right := !right - 1
-          }
-       };
-       run t1
-     """
-
 
   val allExamples: List[String] = List(EX1, EX2, EX3, EX4, EX5, arrProg1, arrProg2, if_true_prog, if_false_prog, reverse_arr_prog)
 }

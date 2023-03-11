@@ -233,15 +233,18 @@ while !i < !n do {
 
 
   val i = new Interpreter()
-  val ast = i.parse(EX1)
+//  val ast = i.parse(EX1)
+//
+  println(i.translate(EX2))
+  println(i.invert(EX2))
 
-  val env =  i.eval(ast)
-  println(env)
-  println(i.stack_tops(env))
-  val rev_ast = i.revAST(ast)
-  val rev_env = i.eval(rev_ast, env)
-  println(rev_env)
-  println( i.stack_tops(rev_env))
+//  val env =  i.eval(ast)
+//  println(env)
+//  println(i.stack_tops(env))
+//  val rev_ast = i.revAST(ast)
+//  val rev_env = i.eval(rev_ast, env)
+//  println(rev_env)
+//  println( i.stack_tops(rev_env))
 
 
 }

@@ -28,8 +28,6 @@ class Parser extends Tokenizer {
   }
 
 
-  case class Counter(id: String="NONE", count: Int = 0)
-
   abstract class Parser[I: IsSeq, T] {
     def parse(in: I): Set[(T, I)]
 
@@ -138,7 +136,7 @@ class Parser extends Tokenizer {
 
   case object Skip extends Stmt
   case class If(a: BExp, bl1: Block, bl2: Block, id: String="NONE") extends Stmt
-  case class While(b: BExp, bl: Block, counter: Counter) extends Stmt
+  case class While(b: BExp, bl: Block, id: String="NONE") extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
   case class AssignNewArrWithSize(id: String, size: AExp) extends Stmt
@@ -204,7 +202,7 @@ class Parser extends Tokenizer {
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
         .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, Counter())} ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w)} ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
 
   // statements
@@ -218,11 +216,12 @@ class Parser extends Tokenizer {
     (p"{" ~ Stmts ~ p"}").map { case _ ~ y ~ _ => y } ||
       Stmt.map(s => List(s))
 
+  //TODO: combine with addVars
   def injectIds(b: Block): List[Stmt] = {
     b.map {
       case w: While =>
         val w_id = whileID()
-        w.copy(b = w.b, counter = Counter(id = w_id), bl = injectIds(w.bl))
+        w.copy(b = w.b, id = w_id, bl = injectIds(w.bl))
       case i: If => i.copy(a = i.a, id = ifID(), bl1 = injectIds(i.bl1), bl2 = injectIds(i.bl2))
       case other => other
     }
@@ -231,8 +230,8 @@ class Parser extends Tokenizer {
 
   def addVars(input: Block, output: Block= List()): Block = input match {
     case Nil => output
-    case While(b, bl, counter) :: tail =>
-      val out = output:+Assign(counter.id, Num(0)):+ While(b, addVars(bl) :+ Assign(counter.id, Aop("+", Var(counter.id), Num(1))), counter)
+    case While(b, bl, id) :: tail =>
+      val out = output:+Assign(id, Num(0)):+ While(b, addVars(bl) :+ Assign(id, Aop("+", Var(id), Num(1))), id)
       addVars(tail, out)
 
     case If(b, bl1, bl2, id) :: tail =>
@@ -245,94 +244,73 @@ class Parser extends Tokenizer {
   def parse(program: String): List[Stmt]  = {
     val p = Stmts.parse_all(tokenize(program)).head
     val p_with_ids = injectIds(p)
+    resetCounters
     addVars(p_with_ids)
   }
 
-  private def stmt2String(stmt: Exp): String = stmt match {
-    case Skip => "skip"
-    case If(a, bl1, bl2, if_id) =>
-      val ifId = if_id.tail(2)
-      s"$if_id := 0;\nif-$ifId ${stmt2String(a)} then {\n$if_id := 1;\n${bl1.map(x => stmt2String(x)).mkString(";\n")}\n} else {\n$if_id := 0;\n${bl2.map(x => stmt2String(x)).mkString(";\n")}\n}"
-    case While(b, bl, counter) =>
-      val whileId = counter.id.tail.tail
-      s"${counter.id} := ${counter.count};\nwhile-$whileId ${stmt2String(b)} do {\n${bl.map(x => stmt2String(x)).mkString(";\n")};\n${counter.id} := !${counter.id} + 1\n}"
-    case Assign(s, a) => s"$s := ${stmt2String(a)}"
-    case AssignArr(id, values) => s"$id := ${values.map(stmt2String).mkString("[", ", ", "]")}"
-    case AssignNewArrWithSize(id, size) => s"$id := |${stmt2String(size)}|"
-    case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2String(index)}] := ${stmt2String(newVal)}"
-    case ArrayVar(id, index) => s"$id[${stmt2String(index)}]"
-    case Var(s) => s"!$s"
-    case Num(i) => s"$i"
-    case Aop(o, a1, a2) => s"${stmt2String(a1)} $o ${stmt2String(a2)}"
-    case Bop(o, a1, a2) => s"(${stmt2String(a1)} $o ${stmt2String(a2)})"
-    case Not(b) => s"~${stmt2String(b)}"
-  }
 
-  private def stmts2String(ast: List[Stmt], output: List[String] = List()) : List[String] = ast match {
-    case Nil => output
-    case s::rest =>
-      if(rest.isEmpty) {
-        stmt2String(s)::stmts2String(rest)
-      }else {
-        s"${stmt2String(s)};\n"::stmts2String(rest)
-      }
-  }
-
-  private def stmt2RevStr(stmt: Exp): String = stmt match {
-    case Skip => "skip"
-    case If(_, bl1, bl2, if_id) =>
-      val ifId = if_id.tail(2)
-      s"if-$ifId (!$if_id = 1) then {\n$if_id =: 1;\n${bl1.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n} else {\n$if_id =: 0;\n${bl2.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n}"
-    case While(_, bl, counter) =>
-      val whileId = counter.id.tail.tail
-      s"while-$whileId (!${counter.id} > 0) do {\n${counter.id} =: !${counter.id} + 1;\n${bl.reverse.map(x => stmt2RevStr(x)).mkString(";\n")}\n};\n${counter.id} =: 0"
-    case Assign(s, a) => s"$s =: ${stmt2RevStr(a)}"
-    case AssignArr(id, values) => s"$id =: ${values.map(stmt2RevStr).mkString("[", ", ", "]")}"
-    case AssignNewArrWithSize(id, size) => s"$id =: |${stmt2RevStr(size)}|"
-    case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2RevStr(index)}] =: ${stmt2RevStr(newVal)}"
-    case ArrayVar(id, index) => s"$id[${stmt2RevStr(index)}]"
-    case Var(s) => s"!$s"
-    case Num(i) => s"$i"
-    case Aop(o, a1, a2) => s"${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)}"
-    case Bop(o, a1, a2) => s"(${stmt2RevStr(a1)} $o ${stmt2RevStr(a2)})"
-    case Not(b) => s"~${stmt2RevStr(b)}"
-  }
-
-  private def stmts2RevStr(ast: List[Stmt], output: List[String] = List()): List[String] = ast match {
-    case Nil => output
-    case s :: rest =>
-      if (rest.isEmpty) {
-        stmt2RevStr(s) :: stmts2RevStr(rest)
-      } else {
-        s"${stmt2RevStr(s)};\n" :: stmts2RevStr(rest)
-      }
-  }
-
-  private def revStmt(stmt: Stmt) = stmt match {
+  private def revASTStmt(stmt: Stmt) = stmt match {
     case Assign(s, a) => RevAssign(s, a)
     case AssignArr(id, values) => RevAssignArr(id, values)
     case AssignNewArrWithSize(id, size) => RevAssignNewArrWithSize(id, size)
     case UpdateArrIndex(id, index, newValue) => RevUpdateArrIndex(id, index, newValue)
-    case If (_, bl1, bl2, id) =>
+    case If(_, bl1, bl2, id) =>
       If(Bop("=", Var(id), Num(1)), revAST(bl1), revAST(bl2), id)
-    case While(_, bl, counter) =>
-      While(Bop(">", Var(counter.id), Num(0)), revAST(bl), counter)
+    case While(_, bl, id) =>
+      While(Bop(">", Var(id), Num(0)), revAST(bl), id)
     case _ => stmt
   }
 
   def revAST(stmts: List[Stmt], output: List[Stmt] = List()): List[Stmt] = stmts match {
     case Nil => output
-    case hd::tail => revAST(tail, output):+revStmt(hd)
+    case hd :: tail => revAST(tail, output) :+ revASTStmt(hd)
   }
 
-  def translateRev(code: String) : String = {
-    val ast = parse(code)
-    stmts2RevStr(ast.reverse).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
+
+
+  private def stmt2code(stmt: Exp): String = stmt match {
+    case Skip => "skip"
+    case If(a, bl1, bl2, if_id) =>
+      val ifId = if_id.tail(2)
+      s"if-$ifId ${stmt2code(a)} then {\n${bl1.map(x => stmt2code(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2code(x)).mkString(";\n")}\n}"
+    case While(b, bl, id) =>
+      val whileId = id.tail.tail
+      s"\nwhile-$whileId ${stmt2code(b)} do {\n${bl.map(x => stmt2code(x)).mkString(";\n")}\n}"
+    case Assign(s, a) => s"$s := ${stmt2code(a)}"
+    case AssignArr(id, values) => s"$id := ${values.map(stmt2code).mkString("[", ", ", "]")}"
+    case AssignNewArrWithSize(id, size) => s"$id := |${stmt2code(size)}|"
+    case UpdateArrIndex(id, index, newVal) => s"$id[${stmt2code(index)}] := ${stmt2code(newVal)}"
+    case ArrayVar(id, index) => s"$id[${stmt2code(index)}]"
+    case RevAssign(s, a) => s"$s =: ${stmt2code(a)}"
+    case RevAssignArr(id, values) => s"$id =: ${values.map(stmt2code).mkString("[", ", ", "]")}"
+    case RevAssignNewArrWithSize(id, size) => s"$id =: |${stmt2code(size)}|"
+    case RevUpdateArrIndex(id, index, newVal) => s"$id[${stmt2code(index)}] =: ${stmt2code(newVal)}"
+    case Var(s) => s"!$s"
+    case Num(i) => s"$i"
+    case Aop(o, a1, a2) => s"${stmt2code(a1)} $o ${stmt2code(a2)}"
+    case Bop(o, a1, a2) => s"(${stmt2code(a1)} $o ${stmt2code(a2)})"
+    case Not(b) => s"~${stmt2code(b)}"
   }
+
+   private def ast2code(ast: List[Stmt], output: List[String] = List()) : List[String] = ast match {
+    case Nil => output
+    case s::rest =>
+      if(rest.isEmpty) {
+        stmt2code(s)::ast2code(rest)
+      }else {
+        s"${stmt2code(s)};\n"::ast2code(rest)
+      }
+  }
+
 
   def translate(code: String): String = {
     val ast = parse(code)
-    stmts2String(ast).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
+    ast2code(ast).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
+  }
+
+  def invert(code: String): String = {
+    val ast = revAST(parse(code))
+    ast2code(ast).mkString.split("\n").filterNot(_.isEmpty).mkString("\n")
   }
 
 

@@ -85,7 +85,6 @@ class Interpreter extends Parser {
           env
         }
 
-
       case RevAssign(x, _) =>
         val old_stack = env(x).asInstanceOf[RVar]
         old_stack.pop

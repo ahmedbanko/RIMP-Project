@@ -133,93 +133,93 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   }
 
 
-//  test("Test revEval_stmt of ArrWithSize") {
-//    val ast = i.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr := [0,0,0,0,0,0,0,0,0,0];arr := [1,2,3,4,5,6,7,8,9,10]")
-//    env = i.eval(ast, env)
-//    val stack_arr = env("arr").asInstanceOf[i.RArray].top
-//    for (i <- stack_arr.indices) {
-//      assert(stack_arr(i).size == 2)
-//      assert(stack_arr(i).top.value == i+1)
-//    }
-//    env = i.revEval(ast, env)
-//    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
-//    for (i <- rev_stack_arr.indices) {
-//      assert(rev_stack_arr(i).size == 1)
-//      assert(rev_stack_arr(i).top.value == 0)
-//    }
-//  }
+  test("Test revEval_stmt of ArrWithSize") {
+    val ast = i.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr := [0,0,0,0,0,0,0,0,0,0];arr := [1,2,3,4,5,6,7,8,9,10]")
+    env = i.eval(ast, env)
+    val stack_arr = env("arr").asInstanceOf[i.RArray].top
+    for (i <- stack_arr.indices) {
+      assert(stack_arr(i).size == 2)
+      assert(stack_arr(i).top.value == i+1)
+    }
+    env = i.eval(i.revAST(ast), env)
+    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
+    for (i <- rev_stack_arr.indices) {
+      assert(rev_stack_arr(i).size == 1)
+      assert(rev_stack_arr(i).top.value == 0)
+    }
+  }
 
 
-//  test("Test revEval_stmt of UpdateArrIndex") {
-//    val ast = i.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr[0]:= 11")
-//    env = i.eval(ast, env)
-//    val stack_arr = env("arr").asInstanceOf[i.RArray].top
-//    assert(stack_arr(0).size == 3)
-//    assert(stack_arr(0).top.value == 11)
-//    for (i <- 1 until stack_arr.length) {
-//      assert(stack_arr(i).size == 2)
-//      assert(stack_arr(i).top.value == i + 1)
-//    }
-//    env = i.revEval(ast, env)
-//    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
-//
-//    for (i <- rev_stack_arr.indices) {
-//      assert(rev_stack_arr(i).size == 1)
-//      assert(rev_stack_arr(i).top.value == 0)
-//    }
-//  }
+  test("Test revEval_stmt of UpdateArrIndex") {
+    val ast = i.parse("arr := |10|;arr := [1,2,3,4,5,6,7,8,9,10];arr[0]:= 11")
+    env = i.eval(ast, env)
+    val stack_arr = env("arr").asInstanceOf[i.RArray].top
+    assert(stack_arr(0).size == 3)
+    assert(stack_arr(0).top.value == 11)
+    for (i <- 1 until stack_arr.length) {
+      assert(stack_arr(i).size == 2)
+      assert(stack_arr(i).top.value == i + 1)
+    }
+    env = i.eval(i.revAST(ast), env)
+    val rev_stack_arr = env("arr").asInstanceOf[i.RArray].top
 
-//
-//  test("Test revEval_stmt of UpdateArrIndex with different arr assigned to different arrays") {
-//    val ast = i.parse("arr := [1,2,3,4,5,6,7,8,9,10];arr := [1,2,3,4,5];arr[0] := arr[0] * 2; arr[1] := arr[1] * 2; arr[2] := arr[2] * 2")
-//    val rev_ast = ast
-//    env = i.eval(ast, env)
-//    env = i.revEval(rev_ast, env)
-//    val arrs_stack: i.RArray = env("arr").asInstanceOf[i.RArray]
-//    val top_arr: Array[RVar] = arrs_stack.top
-//    assert(arrs_stack.size == 1)
-//    assert(top_arr.forall(stackOnlyHasZero))
-//  }
+    for (i <- rev_stack_arr.indices) {
+      assert(rev_stack_arr(i).size == 1)
+      assert(rev_stack_arr(i).top.value == 0)
+    }
+  }
 
 
-//  test("Test revEval_stmt of If-then-else when if true") {
-//    val ast = i.parse(fixtures.if_true_prog)
-//    env = i.eval(ast, env)
-//    assert(env("x").asInstanceOf[RVar].size == 3)
-//    assert(env("x").asInstanceOf[RVar].top.value== 9)
-//    assert(env("y").asInstanceOf[RVar].size == 2)
-//    assert(env("y").asInstanceOf[RVar].top.value== 100)
-//    assert(env("_if1").asInstanceOf[RVar].size == 2)
-//    assert(env("_if1").asInstanceOf[RVar] == mutable.Stack[Int](1, 0))
-//
-//    env = i.revEval(ast, env)
-//    assert(env("x").asInstanceOf[RVar].size == 1)
-//    assert(env("x").asInstanceOf[RVar].top.value== 0)
-//    assert(env("y").asInstanceOf[RVar].size == 1)
-//    assert(env("y").asInstanceOf[RVar].top.value== 0)
-//    assert(env("_if1").asInstanceOf[RVar].size == 1)
-//    assert(env("_if1").asInstanceOf[RVar] == mutable.Stack[Int](0))
-//  }
+  test("Test revEval_stmt of UpdateArrIndex with different arr assigned to different arrays") {
+    val ast = i.parse("arr := [1,2,3,4,5,6,7,8,9,10];arr := [1,2,3,4,5];arr[0] := arr[0] * 2; arr[1] := arr[1] * 2; arr[2] := arr[2] * 2")
+    env = i.eval(ast, env)
+    val rev_ast = i.revAST(ast)
+    env = i.eval(rev_ast, env)
+    val arrs_stack: i.RArray = env("arr").asInstanceOf[i.RArray]
+    val top_arr: Array[RVar] = arrs_stack.top
+    assert(arrs_stack.size == 1)
+    assert(top_arr.forall(stackOnlyHasZero))
+  }
 
 
-//  test("Test revEval_stmt of If-then-else when if false") {
-//    val ast = i.parse(fixtures.if_false_prog)
-//    env = i.eval(ast, env)
-//    assert(env("x").asInstanceOf[RVar].size == 2)
-//    assert(env("x").asInstanceOf[RVar].top.value== 10)
-//    assert(env("y").asInstanceOf[RVar].size == 3)
-//    assert(env("y").asInstanceOf[RVar].top.value== 99)
-//    assert(env("_if1").asInstanceOf[RVar].size == 2)
-//    assert(env("_if1").asInstanceOf[RVar] == mutable.Stack[Int](0, 0))
-//
-//    env = i.revEval(ast, env)
-//    assert(env("x").asInstanceOf[RVar].size == 1)
-//    assert(env("x").asInstanceOf[RVar].top.value== 0)
-//    assert(env("y").asInstanceOf[RVar].size == 1)
-//    assert(env("y").asInstanceOf[RVar].top.value== 0)
-//    assert(env("_if1").asInstanceOf[RVar].size == 1)
-//    assert(env("_if1").asInstanceOf[RVar] == mutable.Stack[Int](0))
-//  }
+  test("Test revEval_stmt of If-then-else when if true") {
+    val ast = i.parse(fixtures.if_true_prog)
+    env = i.eval(ast, env)
+    assert(env("x").asInstanceOf[RVar].size == 3)
+    assert(env("x").asInstanceOf[RVar].top.value== 9)
+    assert(env("y").asInstanceOf[RVar].size == 2)
+    assert(env("y").asInstanceOf[RVar].top.value== 100)
+    assert(env("_if1").asInstanceOf[RVar].size == 3)
+    assert(env("_if1").asInstanceOf[RVar] == i.stack(0,1))
+
+    env = i.eval(i.revAST(ast), env)
+    assert(env("x").asInstanceOf[RVar].size == 1)
+    assert(env("x").asInstanceOf[RVar].top.value== 0)
+    assert(env("y").asInstanceOf[RVar].size == 1)
+    assert(env("y").asInstanceOf[RVar].top.value== 0)
+    assert(env("_if1").asInstanceOf[RVar].size == 1)
+    assert(env("_if1").asInstanceOf[RVar] == i.stack())
+  }
+
+
+  test("Test revEval_stmt of If-then-else when if false") {
+    val ast = i.parse(fixtures.if_false_prog)
+    env = i.eval(ast, env)
+    assert(env("x").asInstanceOf[RVar].size == 2)
+    assert(env("x").asInstanceOf[RVar].top.value== 10)
+    assert(env("y").asInstanceOf[RVar].size == 3)
+    assert(env("y").asInstanceOf[RVar].top.value== 99)
+    assert(env("_if1").asInstanceOf[RVar].size == 3)
+    assert(env("_if1").asInstanceOf[RVar] == i.stack(0,0))
+
+    env = i.eval(i.revAST(ast), env)
+    assert(env("x").asInstanceOf[RVar].size == 1)
+    assert(env("x").asInstanceOf[RVar].top.value== 0)
+    assert(env("y").asInstanceOf[RVar].size == 1)
+    assert(env("y").asInstanceOf[RVar].top.value== 0)
+    assert(env("_if1").asInstanceOf[RVar].size == 1)
+    assert(env("_if1").asInstanceOf[RVar] == i.stack())//empty stack means stack with only 0
+  }
 
 
   test("Test evaluation of blocks") {
@@ -290,16 +290,16 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
   }
 
 
-//  test("Test revEval function") {
-//    val ast = i.parse(fixtures.EX1)
-//    env = i.eval(ast)
-//    env = i.revEval(ast, env)
-//    assert(i.stack_tops(env) == s"Map(fact -> 0, n -> 0, _k1 -> 0)")
-//    val fact_stack = env("fact").asInstanceOf[RVar]
-//    assert(fact_stack.size == 1)
-//    val n_stack = env("n").asInstanceOf[RVar]
-//    assert(n_stack.size == 1)
-//  }
+  test("Test revEval function") {
+    val ast = i.parse(fixtures.EX1)
+    env = i.eval(ast)
+    env = i.eval(i.revAST(ast), env)
+    assert(i.stack_tops(env) == s"Map(fact -> 0, n -> 0, _k1 -> 0)")
+    val fact_stack = env("fact").asInstanceOf[RVar]
+    assert(fact_stack.size == 1)
+    val n_stack = env("n").asInstanceOf[RVar]
+    assert(n_stack.size == 1)
+  }
 
   test("Test forward evaluation of pre-defined program 1") {
     val ast = i.parse(fixtures.EX1)
@@ -311,74 +311,73 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
 
 
 
-//  test("Test forward evaluation of pre-defined program 2") {
-//    val ast = i.parse(fixtures.EX2)
-//    val env = i.eval(ast)
-//    assert(env("a").asInstanceOf[RVar] == i.stack( 49, 21, 14, 7))
-//    assert(env("b").asInstanceOf[RVar] == i.stack( 28, 7))
-//    assert(env("_if1").asInstanceOf[RVar] == i.stack(0,1,0,1,1))
-//    assert(env("_k1").asInstanceOf[RVar] == i.stack(0,1,2,3,4))
-//  }
+  test("Test forward evaluation of pre-defined program 2") {
+    val ast = i.parse(fixtures.EX2)
+    val env = i.eval(ast)
+    assert(env("a").asInstanceOf[RVar] == i.stack( 49, 21, 14, 7))
+    assert(env("b").asInstanceOf[RVar] == i.stack( 28, 7))
+    assert(env("_if1").asInstanceOf[RVar] == i.stack(0,1,0,0,0,1,0,1))
+    assert(env("_k1").asInstanceOf[RVar] == i.stack(0,1,2,3,4))
+  }
 
   test("Test forward evaluation of pre-defined program 3") {
     val ast = i.parse(fixtures.EX3)
     val env = i.eval(ast)
     assert(env("x").asInstanceOf[RVar] == i.stack( 12,6,3,10,5,16,8,4,2,1))
     assert(env("r").asInstanceOf[RVar] == i.stack( 12, 10, 8, 6, 4, 2, 0, 6, 4, 2, 0, 3, 1, 10, 8, 6, 4, 2, 0, 5, 3, 1, 16, 14, 12, 10, 8, 6, 4, 2, 0, 8, 6, 4, 2, 0, 4, 2, 0, 2, 0))
-//    assert(env("_if1").asInstanceOf[RVar] == i.stack(1, 1, 1, 1, 0, 1, 0, 1, 1, 0))
+    assert(env("_if1").asInstanceOf[RVar] == i.stack(0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,1))
     assert(env("_k1").asInstanceOf[RVar] == i.stack(  0,1,2,3,4,5,6,7,8,9))
-    assert(env("_k2").asInstanceOf[RVar] == i.stack(0, 1, 2, 4, 8, 2, 5, 1, 3, 6, 0))
-
+    assert(env("_k2").asInstanceOf[RVar] == i.stack(0,1,2,3,4,5,6,0,1,2,3,0,1,0,1,2,3,4,5,0,1,2,0,1,2,3,4,5,6,7,8,0,1,2,3,4,0,1,2,0,1))
   }
-//
-//  test("Test forward evaluation of pre-defined program 4") {
-//    val ast = i.parse(fixtures.EX4)
-//    val env = i.eval(ast)
-//    assert(env("x").asInstanceOf[RVar] == i.stack( 13))
-//    assert(env("r").asInstanceOf[RVar] == i.stack( 13, 11, 9, 7, 5, 3, 1, 13, 10, 7, 4, 1, 13, 9, 5, 1, 13, 8, 3, 13, 7, 1))
-//    assert(env("isprime").asInstanceOf[RVar] == i.stack( 1))
-//    assert(env("limit").asInstanceOf[RVar] == i.stack( 7))
-//    assert(env("factor").asInstanceOf[RVar] == i.stack( 2, 3, 4, 5, 6, 7))
-//    assert(env("_k1").asInstanceOf[RVar] == mutable.Stack[Int](5,0))
-//    assert(env("_k2").asInstanceOf[RVar] == mutable.Stack[Int]( 2,2,3,4,6,0))
-//    assert(env("_if1").asInstanceOf[RVar] == mutable.Stack[Int]( 0,0,0,0,0,0))
-//  }
-//
-//  test("Test forward evaluation of pre-defined program 5") {
-//    val ast = i.parse(fixtures.EX5)
-//    val env = i.eval(ast)
-//    assert(env("a").asInstanceOf[RVar] == i.stack( 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89))
-//    assert(env("b").asInstanceOf[RVar] == i.stack( 1,2,3,5,8,13,21,34,55,89,144))
-//    assert(env("i").asInstanceOf[RVar] == i.stack( 0,1,2,3,4,5,6,7,8,9,10))
-//    assert(env("tmp").asInstanceOf[RVar] == i.stack( 1,1,2,3,5,8,13,21,34,55))
-//    assert(env("_k1").asInstanceOf[RVar] == mutable.Stack[Int]( 10,0))
-//  }
-//
-//  test("Test forward evaluation of pre-defined reverse_arr_prog") {
-//    val ast = i.parse(fixtures.reverse_arr_prog)
-//    val env = i.eval(ast)
-//    val arr = env("arr").asInstanceOf[i.RArray].top
-//    assert(arr(0) == i.stack( 1, 5))
-//    assert(arr(1) == i.stack( 2, 4))
-//    assert(arr(2) == i.stack(    3))
-//    assert(arr(3) == i.stack( 4, 2))
-//    assert(arr(4) == i.stack( 5, 1))
-//    assert(env("_k1").asInstanceOf[RVar] == mutable.Stack[Int]( 2,0))
-//  }
+
+  test("Test forward evaluation of pre-defined program 4") {
+    val ast = i.parse(fixtures.EX4)
+    val env = i.eval(ast)
+    assert(env("x").asInstanceOf[RVar] == i.stack( 13))
+    assert(env("r").asInstanceOf[RVar] == i.stack( 13, 11, 9, 7, 5, 3, 1, 13, 10, 7, 4, 1, 13, 9, 5, 1, 13, 8, 3, 13, 7, 1))
+    assert(env("isprime").asInstanceOf[RVar] == i.stack( 1))
+    assert(env("limit").asInstanceOf[RVar] == i.stack( 7))
+    assert(env("factor").asInstanceOf[RVar] == i.stack( 2, 3, 4, 5, 6, 7))
+    assert(env("_k1").asInstanceOf[RVar] == i.stack(0,1,2,3,4,5))
+    assert(env("_k2").asInstanceOf[RVar] == i.stack( 0,1,2,3,4,5,6,0,1,2,3,4,0,1,2,3,0,1,2,0,1,2))
+    assert(env("_if1").asInstanceOf[RVar] == i.stack( 0,0,0,0,0,0,0,0,0,0))
+  }
+
+  test("Test forward evaluation of pre-defined program 5") {
+    val ast = i.parse(fixtures.EX5)
+    val env = i.eval(ast)
+    assert(env("a").asInstanceOf[RVar] == i.stack( 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89))
+    assert(env("b").asInstanceOf[RVar] == i.stack( 1,2,3,5,8,13,21,34,55,89,144))
+    assert(env("i").asInstanceOf[RVar] == i.stack( 0,1,2,3,4,5,6,7,8,9,10))
+    assert(env("tmp").asInstanceOf[RVar] == i.stack( 1,1,2,3,5,8,13,21,34,55))
+    assert(env("_k1").asInstanceOf[RVar] == i.stack( 0,1,2,3,4,5,6,7,8,9,10))
+  }
+
+  test("Test forward evaluation of pre-defined reverse_arr_prog") {
+    val ast = i.parse(fixtures.reverse_arr_prog)
+    val env = i.eval(ast)
+    val arr = env("arr").asInstanceOf[i.RArray].top
+    assert(arr(0) == i.stack( 1, 5))
+    assert(arr(1) == i.stack( 2, 4))
+    assert(arr(2) == i.stack(    3))
+    assert(arr(3) == i.stack( 4, 2))
+    assert(arr(4) == i.stack( 5, 1))
+    assert(env("_k1").asInstanceOf[RVar] == i.stack( 0,1,2))
+  }
 
 
-//  test("Test backward evaluation of pre-defined programs") {
-//    for(p <- fixtures.allExamples){
-//      // Forward evaluation
-//      val ast = i.parse(p)
-//      val env = i.eval(ast)
-//
-//      // Backward evaluation
-//      val rev_ast = ast
-//      val rev_env = i.revEval(rev_ast, env)
-//      rev_env.values.foreach(s => assert(stackOnlyHasZero(s)))
-//    }
-//  }
+  test("Test backward evaluation of pre-defined programs") {
+    for(p <- fixtures.allExamples){
+      // Forward evaluation
+      val ast = i.parse(p)
+      val env = i.eval(ast)
+
+      // Backward evaluation
+      val rev_ast = i.revAST(ast)
+      val rev_env = i.eval(rev_ast, env)
+      rev_env.values.foreach(s => assert(stackOnlyHasZero(s)))
+    }
+  }
 
 
   def stackOnlyHasZero(stack: Any): Boolean =

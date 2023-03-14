@@ -14,6 +14,7 @@ object RIMP extends App {
       val parts = input.split("\\s+")
       val command = parts.head
       val args = parts.tail.toList
+      try {
         command match {
           case "translate" => translate(args)
           case "invert" => invert(args)
@@ -23,6 +24,11 @@ object RIMP extends App {
           case "exit" => exit = true
           case _ => println(s"Unknown command: $command")
         }
+      } catch {
+        case e: java.util.NoSuchElementException => println("Syntax error: the program code is not formed correctly")
+        case e: Exception => println(e)
+      }
+
     }
     i.resetCounters
   }

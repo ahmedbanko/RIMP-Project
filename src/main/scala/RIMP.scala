@@ -2,8 +2,8 @@ import rimp.Interpreter
 
 import scala.io.Source
 
-object RIMP extends App {
-  override def main(args: Array[String]): Unit = {
+object RIMP {
+   def main(args: Array[String]): Unit = {
     val i = new Interpreter()
     println("Welcome to RIMP Interpreter!")
     println("Type 'help' to see possible commands and options.")

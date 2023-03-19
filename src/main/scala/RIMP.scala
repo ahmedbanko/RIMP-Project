@@ -6,7 +6,7 @@ object RIMP extends App {
   override def main(args: Array[String]): Unit = {
     val i = new Interpreter()
     println("Welcome to RIMP Interpreter!")
-    println("Type help to see possible commands and options.")
+    println("Type 'help' to see possible commands and options.")
     var exit = false
     while (!exit) {
       val input = scala.io.StdIn.readLine()
@@ -116,6 +116,7 @@ object RIMP extends App {
       println("'invert' prints reversed representation of the given code.")
       println("'evaluate' executes the code in the forward direction and prints the final values of all variables.")
       println("'reverse' executes the code in the backward direction and prints the final values of all variables.")
+      println("'exit' terminates the system.")
       println("NOTE: the commands 'evaluate' & 'reverse' can run with the option '--steps' which prints the runtime values.")
     }
 

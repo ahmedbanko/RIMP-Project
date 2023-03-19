@@ -1,22 +1,22 @@
 package rimp
 
+import scala.collection.mutable
+
 class Interpreter extends Parser {
 
   // ------------ RIMP.Interpreter -------------------
 
-
-  // an interpreter for the WHILE language
+  // an interpreter for the RIMP language
   type Env = Map[String, Any]
 
 
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
-    case Var(s) => env(s).asInstanceOf[Int]
-    case ArrayVar(id, index) => {
-      val valsList = env(id).asInstanceOf[Array[Int]]
+    case Var(s) => env(s).asInstanceOf[RVar].top.value
+    case ArrayVar(id, index) =>
+      val valsArray = env(id).asInstanceOf[RArray].top
       val indexVal = eval_aexp(index, env)
-      valsList(indexVal)
-    }
+      valsArray(indexVal).top.value
     case Aop("+", a1, a2) => eval_aexp(a1, env) + eval_aexp(a2, env)
     case Aop("-", a1, a2) => eval_aexp(a1, env) - eval_aexp(a2, env)
     case Aop("*", a1, a2) => eval_aexp(a1, env) * eval_aexp(a2, env)
@@ -26,8 +26,6 @@ class Interpreter extends Parser {
 
 
   def eval_bexp(b: BExp, env: Env): Boolean = b match {
-    case True => true
-    case False => false
     case Bop("=", a1, a2) => eval_aexp(a1, env) == eval_aexp(a2, env)
     case Bop("!=", a1, a2) => !(eval_aexp(a1, env) == eval_aexp(a2, env))
     case Bop(">", a1, a2) => eval_aexp(a1, env) > eval_aexp(a2, env)
@@ -37,46 +35,115 @@ class Interpreter extends Parser {
     case Not(b) => !eval_bexp(b, env)
   }
 
-
-  def eval_thread(bl: Block, env: Env): Env = {
-    new Thread(() => {
-      eval_bl(bl, env)
-    }).start()
-    env
-  }
-
-  def eval_stmt(s: Stmt, env: Env): Env =
+  def eval_stmt(s: Stmt, env: Env, printSteps: Boolean = false): Env =
     s match {
-      case Skip => env
-      case Assign(x, a) => env + (x -> eval_aexp(a, env))
-      case AssignArr(id, values) => env + (id -> values.map(x => eval_aexp(x, env)))
-      case ArrayWithSize(id, size) => env + (id -> new Array[Int](eval_aexp(size, env)))
-      case UpdateArrIndex(id, index, newVal) => {
+      case Skip =>
+        if(printSteps) println(env2string(env))
+        env
+      case Assign(x, a) =>
+        val old_stack = env.getOrElse(x, stack())
+        val out = env + (x -> old_stack.asInstanceOf[RVar].push(eval_aexp(a, env)))
+        if(printSteps) println(env2string(out))
+        out
+      case AssignArr(id, values) =>
+        val old_stack = env.getOrElse(id, mutable.Stack(Array.fill(values.length)(stack()))).asInstanceOf[RArray]
+        old_stack.push(values.map(v => stack(eval_aexp(v, env))))
+        val out = env + (id -> old_stack)
+        if(printSteps) println(env2string(out))
+        out
+      case AssignNewArrWithSize(id, size) =>
+        val length = eval_aexp(size, env)
+        val old_stack = env.getOrElse(id, mutable.Stack(Array.fill(length)(stack()))).asInstanceOf[RArray]
+        old_stack.push(Array.fill(length)(stack()))
+        val out = env + (id -> old_stack)
+        if(printSteps) println(env2string(out))
+        out
+      case UpdateArrIndex(id, index, newVal) =>
         val newVal_eval = eval_aexp(newVal, env)
         val index_eval = eval_aexp(index, env)
-        env + (id -> env(id).asInstanceOf[Array[Int]].updated(index_eval, newVal_eval))
-      }
-      case WriteVar(x) =>
-        println(env(x));
+        val arr = env(id).asInstanceOf[RArray]
+        arr.top(index_eval).push(newVal_eval)
+        if(printSteps) println(env2string(env))
         env
-      case WriteStr(x) =>
-        //Expands standard Scala escape sequences in a string. copied from:
-        //https://www.scala-lang.org/api/2.13.6/scala/StringContext$.html
-        print(StringContext.processEscapes(x.substring(1, x.length - 1)))
+      case If(b, bl1, bl2, if_id) =>
+        if (eval_bexp(b, env)) {
+         val out = eval_bl(bl1, env, printSteps)
+          if(printSteps) println(env2string(out))
+          out
+        } else {
+          val out = eval_bl(bl2, env, printSteps)
+          if(printSteps) println(env2string(out))
+          out
+        }
+
+      case While(b, bl, counter) =>
+        if (eval_bexp(b, env)) {
+            eval_stmt(While(b, bl, counter), eval_bl(bl, env, printSteps), printSteps)
+        }
+        else {
+          if(printSteps) println(env2string(env))
+          env
+        }
+
+      case RevAssign(x, _) =>
+        val old_stack = env(x).asInstanceOf[RVar]
+        old_stack.pop
+        val out = env + (x -> old_stack)
+        if (printSteps) println(env2string(out))
+        out
+      case RevAssignArr(id, _) =>
+        val old_stack = env(id).asInstanceOf[RArray]
+        old_stack.pop()
+        val out = env + (id -> old_stack)
+        if (printSteps) println(env2string(out))
+        out
+      case RevAssignNewArrWithSize(id, _) =>
+        val old_stack = env(id).asInstanceOf[RArray]
+        old_stack.pop()
+        val out = env + (id -> old_stack)
+        if (printSteps) println(env2string(out))
+        out
+      case RevUpdateArrIndex(id, index, _) =>
+        val index_eval = eval_aexp(index, env)
+        val arr = env(id).asInstanceOf[RArray].top
+        arr(index_eval).pop
+        if (printSteps) println(env2string(env))
         env
-      case AssignThread(id, bl) => env + (id -> bl)
-      case RunThread(id) => eval_thread(env(id).asInstanceOf[Block], env)
-      case If(b, bl1, bl2) => if (eval_bexp(b, env)) eval_bl(bl1, env) else eval_bl(bl2, env)
-      case While(b, bl) =>
-        if (eval_bexp(b, env)) eval_stmt(While(b, bl), eval_bl(bl, env))
-        else env
     }
 
-  def eval_bl(bl: Block, env: Env): Env = bl match {
+  def eval_bl(bl: Block, env: Env, printSteps: Boolean = false): Env = bl match {
     case Nil => env
-    case s :: bl => eval_bl(bl, eval_stmt(s, env))
+    case s :: bl =>
+     eval_bl(bl, eval_stmt(s, env, printSteps), printSteps)
   }
 
-  def eval(bl: Block, env: Env = Map()): Env = eval_bl(bl, env)
+  def eval(bl: Block, env: Env = Map(), printSteps: Boolean = false): Env = {
+    if(printSteps) println(env2string(env))
+    eval_bl(bl, env, printSteps)
+  }
+
+  def stack_tops(env: Env): String = {
+    env.map { case (key, value) =>
+      value match {
+        case i: Int => s"$key -> $i"
+        case s: RVar => s"$key -> ${s.top.value}"
+        case s: mutable.Stack[_] if s.head.isInstanceOf[Int] => s"$key -> ${s.head}"
+        case s: mutable.Stack[_] if s.head.isInstanceOf[Array[RVar]] =>
+          val top_arr = s.head.asInstanceOf[Array[RVar]]
+          s"$key -> Array[${top_arr.map(e => e.top.value).mkString(", ")}]"
+      }
+    }.mkString("Map(", ", ", ")")
+  }
+
+
+  def env2string(env: Env): String = {
+    env.map { case (key, value) =>
+      value match {
+        case s: mutable.Stack[_] if s.head.isInstanceOf[Array[RVar]] =>
+          s"$key -> ${s.map(a => s"Array${a.asInstanceOf[Array[RVar]].map(a => s"${a.toString}").mkString("(", ", ", ")")}")}"
+        case rest => s"$key -> ${rest.toString}"
+      }
+    }.mkString("Map(", ", ", ")")
+  }
 
 }

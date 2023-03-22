@@ -9,7 +9,12 @@ class Interpreter extends Parser {
   // an interpreter for the RIMP language
   type Env = Map[String, Any]
 
-
+  /**
+   *
+   * @param a
+   * @param env
+   * @return
+   */
   def eval_aexp(a: AExp, env: Env): Int = a match {
     case Num(i) => i
     case Var(s) => env(s).asInstanceOf[RVar].top.value
@@ -24,7 +29,12 @@ class Interpreter extends Parser {
     case Aop("%", a1, a2) => eval_aexp(a1, env) % eval_aexp(a2, env)
   }
 
-
+  /**
+   *
+   * @param b
+   * @param env
+   * @return
+   */
   def eval_bexp(b: BExp, env: Env): Boolean = b match {
     case Bop("=", a1, a2) => eval_aexp(a1, env) == eval_aexp(a2, env)
     case Bop("!=", a1, a2) => !(eval_aexp(a1, env) == eval_aexp(a2, env))
@@ -35,6 +45,13 @@ class Interpreter extends Parser {
     case Not(b) => !eval_bexp(b, env)
   }
 
+  /**
+   *
+   * @param s
+   * @param env
+   * @param printSteps
+   * @return
+   */
   def eval_stmt(s: Stmt, env: Env, printSteps: Boolean = false): Env =
     s match {
       case Skip =>
@@ -111,17 +128,36 @@ class Interpreter extends Parser {
         env
     }
 
+  /**
+   *
+   * @param bl
+   * @param env
+   * @param printSteps
+   * @return
+   */
   def eval_bl(bl: Block, env: Env, printSteps: Boolean = false): Env = bl match {
     case Nil => env
     case s :: bl =>
      eval_bl(bl, eval_stmt(s, env, printSteps), printSteps)
   }
 
+  /**
+   *
+   * @param bl
+   * @param env
+   * @param printSteps
+   * @return
+   */
   def eval(bl: Block, env: Env = Map(), printSteps: Boolean = false): Env = {
     if(printSteps) println(env2string(env))
     eval_bl(bl, env, printSteps)
   }
 
+  /**
+   *
+   * @param env
+   * @return
+   */
   def stack_tops(env: Env): String = {
     env.map { case (key, value) =>
       value match {
@@ -135,7 +171,11 @@ class Interpreter extends Parser {
     }.mkString("Map(", ", ", ")")
   }
 
-
+  /**
+   *
+   * @param env
+   * @return
+   */
   def env2string(env: Env): String = {
     env.map { case (key, value) =>
       value match {

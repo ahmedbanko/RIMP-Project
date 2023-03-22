@@ -1,7 +1,15 @@
 package rimp
 
-class Lexer {
+/**
+ * Class Lexer.
+ *
+ * Lexer class includes implementation of functions performing
+ * lexical analysis on a given plain text. The code used in this
+ * class is developed from the source code given in Compiler and
+ * Formal Languages Module at King's College London led by Dr. Christian Urban.
+ */
 
+class Lexer {
   //  --------- RIMP.Lexer -------------
 
   import scala.language.implicitConversions
@@ -34,23 +42,43 @@ class Lexer {
   case class Nts(v: List[Val]) extends Val
 
 
-  // some convenience for typing in regular expressions
+  /** Some convenience for typing in regular expressions.
+   *
+   * @param s A list of Characters.
+   * @return A regular expression matching the given character list.
+   */
   def charlist2rexp(s: List[Char]): Rexp = s match {
     case Nil => ONE
     case c :: Nil => CHAR(c)
     case c :: s => SEQ(CHAR(c), charlist2rexp(s))
   }
 
+  /**
+   *  Convert a given string to a corresponding regular expression.
+   * @param s A string value.
+   * @return A regular expression matching the given string.
+   */
   implicit def string2rexp(s: String): Rexp =
     charlist2rexp(s.toList)
 
-
+  /**
+   * Implicit conversion that allows Rexp objects to be used with infix operators.
+   *
+   * @param r The Rexp object to be converted.
+   * @return An object with methods that allow the use of infix operators with regular expressions.
+   */
   implicit def RexpOps(r: Rexp) = new {
     def |(s: Rexp) = ALT(r, s)
     def % = STAR(r)
     def ~(s: Rexp) = SEQ(r, s)
   }
 
+  /**
+   * Implicit conversion that allows String objects to be used with infix operators.
+   *
+   * @param s The String object being converted.
+   * @return An object with methods that allow infix operators to be used with regular expressions.
+   */
   implicit def stringOps(s: String) = new {
     def |(r: Rexp) = ALT(s, r)
     def |(r: String) = ALT(s, r)
@@ -59,6 +87,12 @@ class Lexer {
     def $(r: Rexp) = RECD(s, r)
   }
 
+  /**
+   * Determines whether a regular expression can match the empty string.
+   *
+   * @param r The regular expression to check.
+   * @return true if the regular expression can match the empty string, false otherwise.
+   */
   def nullable(r: Rexp): Boolean = r match {
     case ZERO => false
     case ONE => true
@@ -74,6 +108,13 @@ class Lexer {
     case OPTIONAL(_) => true
   }
 
+  /**
+   * Returns the derivative of the regular expression 'r' with respect to the character 'c'.
+   *
+   * @param c The character to differentiate with respect to.
+   * @param r The regular expression to differentiate.
+   * @return The derivative of the regular expression with respect to 'c'.
+   */
   def der(c: Char, r: Rexp): Rexp = r match {
     case ZERO => ZERO
     case ONE => ZERO
@@ -92,7 +133,12 @@ class Lexer {
   }
 
 
-  // extracts a string from a value
+  /**
+   * Flattens a given Val object into a string representation.
+   *
+   * @param v The Val object to flatten.
+   * @return A string representation of the Val object.
+   */
   def flatten(v: Val): String = v match {
     case Empty => ""
     case Chr(c) => c.toString
@@ -109,8 +155,18 @@ class Lexer {
   }
 
 
-  // extracts an environment from a value;
-  // used for tokenising a string
+  /**
+   * Returns the environment of a given value 'v', represented as a list of
+   * pairs of strings.
+   *
+   * The environment of a value is the set of named variables that occur
+   * within it, along with their corresponding values. The function recursively
+   * traverses the structure of 'v' and collects all variable bindings into
+   * a list of '(name, value)' pairs.
+   *
+   * @param v The value for which to compute the environment.
+   * @return A list of '(name, value)' pairs representing the environment of 'v'.
+   */
   def env(v: Val): List[(String, String)] = v match {
     case Empty => Nil
     case Chr(_) => Nil
@@ -127,9 +183,12 @@ class Lexer {
   }
 
 
-  // The injection and mkeps part of the lexer
-  //===========================================
-
+  /**
+   * Computes the empty derivative of a regular expression.
+   *
+   * @param r The regular expression to compute the empty derivative of.
+   * @return A Val object representing the empty derivative of the regular expression.
+   */
   def mkeps(r: Rexp): Val = r match {
     case ONE => Empty
     case ALT(r1, r2) =>
@@ -142,6 +201,14 @@ class Lexer {
     case NTIMES(r, n) => Stars(List.fill(n)(mkeps(r)))
   }
 
+  /**
+   * Applies an injection function to a regular expression and a value.
+   *
+   * @param r The regular expression to apply the injection function to.
+   * @param c The character to inject into the regular expression.
+   * @param v The value to apply the injection function to.
+   * @return The result of applying the injection function to the regular expression and value.
+   */
   def inj(r: Rexp, c: Char, v: Val): Val = (r, v) match {
     case (STAR(r), Sequ(v1, Stars(vs))) => Stars(inj(r, c, v1) :: vs)
     case (SEQ(r1, _), Sequ(v1, v2)) => Sequ(inj(r1, c, v1), v2)
@@ -180,7 +247,14 @@ class Lexer {
 
   def F_ERROR(v: Val): Val = throw new Exception("error")
 
-  // simplification
+  /**
+   * Simplifies a regular expression and returns an equivalent
+   * regular expression and a corresponding function that transforms the matches of the
+   * simplified expression into matches of the original expression.
+   *
+   * @param r The regular expression to simplify.
+   * @return A tuple containing the simplified regular expression and a transformation function.
+   */
   def simp(r: Rexp): (Rexp, Val => Val) = r match {
     case ALT(r1, r2) =>
       val (r1s, f1s) = simp(r1)
@@ -204,7 +278,14 @@ class Lexer {
     case r => (r, F_ID)
   }
 
-  // lexing functions including simplification
+  /**
+   * Applies lexical analysis to the input string 's' using the regular expression 'r'.
+   *
+   * @param r The regular expression to be used for lexical analysis.
+   * @param s The input string to be analyzed.
+   * @return A 'Val' object representing the result of the analysis.
+   * @throws Exception if the input string does not match the regular expression.
+   */
   def lex_simp(r: Rexp, s: List[Char]): Val = s match {
     case Nil => if (nullable(r)) mkeps(r) else {
       throw new Exception("lexing error")
@@ -214,10 +295,21 @@ class Lexer {
       inj(r, c, f_simp(lex_simp(r_simp, cs)))
   }
 
+  /**
+   * Performs simple lexing of a given regular expression 'r' on a given input string 's',
+   * and returns a list of pairs, where each pair consists of a token and its corresponding lexeme.
+   *
+   * @param r The regular expression to use for lexing.
+   * @param s The input string to lex.
+   * @return A list of pairs, where each pair consists of a token and its corresponding string expression.
+   */
   def lexing_simp(r: Rexp, s: String): List[(String, String)] =
     env(lex_simp(r, s.toList))
 
 
+  /**
+   * RIMP grammar represented as regular expressions.
+   */
   val KEYWORD: Rexp = "skip" | "while" | "do" | "if" | "then" | "else"
   val OP: Rexp = "+" | "-" | "*" | "%" | "/" | "=" | "!=" | ">" | "<" | "<=" | ">=" | ":=" | "!" | "~"
   val alphabet: String = ('A' to 'Z').toList.mkString ++ ('a' to 'z').toList.mkString

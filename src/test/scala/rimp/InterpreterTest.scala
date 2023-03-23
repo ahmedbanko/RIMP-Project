@@ -19,7 +19,7 @@ class InterpreterTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndA
     env = Map()
 
     // reset counters
-    i.resetCounters
+    i.resetCounters()
   }
 
 

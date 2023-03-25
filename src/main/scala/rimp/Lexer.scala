@@ -1,9 +1,7 @@
 package rimp
 
 /**
- * Class Lexer.
- *
- * Lexer class includes implementation of functions performing
+ * A class that includes implementation of functions performing
  * lexical analysis on a given plain text. The code used in this
  * class is developed from the source code given in Compiler and
  * Formal Languages Module at King's College London led by Dr. Christian Urban.

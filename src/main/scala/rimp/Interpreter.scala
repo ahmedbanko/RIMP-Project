@@ -3,9 +3,7 @@ package rimp
 import scala.collection.mutable
 
 /**
- * Class Interpreter.
- *
- * Interpreter class includes implementation of functions which
+ * A class that includes implementation of functions which
  * evaluates various type of statements and expressions using Scala
  * programming language. The code used in this
  * class is developed from the source code given in Compiler and
@@ -20,10 +18,10 @@ class Interpreter extends Parser {
   type Env = Map[String, Any]
 
   /**
-   * Evaluates an arithmetic expression in the given environment and returns the result.
+   * Evaluates an arithmetic expression in the given environment.
    *
    * @param a The arithmetic expression to evaluate.
-   * @param env The environment in which to evaluate the expression.
+   * @param env The environment in which the arithmetic will be evaluated.
    * @return The result of evaluating the expression.
    */
   def eval_aexp(a: AExp, env: Env): Int = a match {

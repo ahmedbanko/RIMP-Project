@@ -50,5 +50,61 @@ class ParserTest extends AnyFunSuite with BeforeAndAfterAll with BeforeAndAfterE
     assert(p.invert(fixtures.reverse_arr_prog) == reverse_arr_prog_inverted)
   }
 
+  test("Reversing the reversed AST should return the original AST - EX1"){
+    val ast = p.parse(fixtures.EX1)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - EX2") {
+    val ast = p.parse(fixtures.EX2)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - EX3") {
+    val ast = p.parse(fixtures.EX3)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - EX4") {
+    val ast = p.parse(fixtures.EX4)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - EX5") {
+    val ast = p.parse(fixtures.EX5)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - if_true_prog") {
+    val ast = p.parse(fixtures.if_true_prog)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - if_false_prog") {
+    val ast = p.parse(fixtures.if_false_prog)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
+  test("Reversing the reversed AST should return the original AST - reverse_arr_prog") {
+    val ast = p.parse(fixtures.reverse_arr_prog)
+    val rev_ast = p.revAST(ast)
+    val rev_rev_ast = p.revAST(rev_ast)
+    assert(rev_rev_ast == ast)
+  }
+
 
 }

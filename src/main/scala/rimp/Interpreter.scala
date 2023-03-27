@@ -94,7 +94,7 @@ class Interpreter extends Parser {
         arr.top(index_eval).push(newVal_eval)
         if(printSteps) println(env2string(env))
         env
-      case If(b, bl1, bl2, if_id) =>
+      case If(b, bl1, bl2, ob, if_id) =>
         if (eval_bexp(b, env)) {
          val out = eval_bl(bl1, env, printSteps)
           if(printSteps) println(env2string(out))
@@ -105,9 +105,9 @@ class Interpreter extends Parser {
           out
         }
 
-      case While(b, bl, counter) =>
+      case While(b, bl, ob, counterID) =>
         if (eval_bexp(b, env)) {
-            eval_stmt(While(b, bl, counter), eval_bl(bl, env, printSteps), printSteps)
+            eval_stmt(While(b, bl, ob, counterID), eval_bl(bl, env, printSteps), printSteps)
         }
         else {
           if(printSteps) println(env2string(env))

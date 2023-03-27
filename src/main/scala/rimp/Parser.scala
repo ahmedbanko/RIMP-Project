@@ -254,8 +254,8 @@ class Parser extends Tokenizer {
   type ArrBlock = Array[AExp]
 
   case object Skip extends Stmt
-  case class If(a: BExp, bl1: Block, bl2: Block, id: String="NONE") extends Stmt
-  case class While(b: BExp, bl: Block, id: String="NONE") extends Stmt
+  case class If(a: BExp, bl1: Block, bl2: Block, original_b: BExp, id: String="NONE") extends Stmt
+  case class While(b: BExp, bl: Block, original_b: BExp, id: String="NONE") extends Stmt
   case class Assign(s: String, a: AExp) extends Stmt
   case class AssignArr(id: String, values: Array[AExp]) extends Stmt
   case class AssignNewArrWithSize(id: String, size: AExp) extends Stmt
@@ -320,8 +320,8 @@ class Parser extends Tokenizer {
         case id ~ _ ~ index ~ _ ~ _ ~ newVal => UpdateArrIndex(id, index, newVal)
       } ||
       (p"if" ~ BExp ~ p"then" ~ Block ~ p"else" ~ Block)
-        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w) } ||
-      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w)} ||
+        .map[Stmt] { case _ ~ y ~ _ ~ u ~ _ ~ w => If(y, u, w, y) } ||
+      (p"while" ~ BExp ~ p"do" ~ Block).map[Stmt] { case _ ~ y ~ _ ~ w => While(y, w, y)} ||
       (p"(" ~ Stmt ~ p")").map[Stmt] { case _ ~ x ~ _ => x }
 
   // statements
@@ -362,12 +362,12 @@ class Parser extends Tokenizer {
    */
   def addVars(input: Block, output: Block= List()): Block = input match {
     case Nil => output
-    case While(b, bl, id) :: tail =>
-      val out = output:+Assign(id, Num(0)):+ While(b, addVars(bl) :+ Assign(id, Aop("+", Var(id), Num(1))), id)
+    case While(b, bl, ob, id) :: tail =>
+      val out = output:+Assign(id, Num(0)):+ While(b, addVars(bl) :+ Assign(id, Aop("+", Var(id), Num(1))), ob, id)
       addVars(tail, out)
 
-    case If(b, bl1, bl2, id) :: tail =>
-      val out = (Assign(id, Num(0)) ::output) :+ If(b, addVars(bl1):+Assign(id, Num(1)), addVars(bl2):+Assign(id, Num(0)), id)
+    case If(b, bl1, bl2, ob, id) :: tail =>
+      val out = (Assign(id, Num(0)) ::output) :+ If(b, addVars(bl1):+Assign(id, Num(1)), addVars(bl2):+Assign(id, Num(0)), ob, id)
       addVars(tail, out)
     case hd::tail => addVars(tail, output:+hd)
   }
@@ -402,10 +402,23 @@ class Parser extends Tokenizer {
     case AssignArr(id, values) => RevAssignArr(id, values)
     case AssignNewArrWithSize(id, size) => RevAssignNewArrWithSize(id, size)
     case UpdateArrIndex(id, index, newValue) => RevUpdateArrIndex(id, index, newValue)
-    case If(_, bl1, bl2, id) =>
-      If(Bop("=", Var(id), Num(1)), revAST(bl1), revAST(bl2), id)
-    case While(_, bl, id) =>
-      While(Bop(">", Var(id), Num(0)), revAST(bl), id)
+    case RevAssign(s, a) => Assign(s, a)
+    case RevAssignArr(id, values) => AssignArr(id, values)
+    case RevAssignNewArrWithSize(id, size) => AssignNewArrWithSize(id, size)
+    case RevUpdateArrIndex(id, index, newValue) => UpdateArrIndex(id, index, newValue)
+    case If(b, bl1, bl2, ob, id) =>
+      if(b.toString.contains("_if")){
+        If(ob, revAST(bl1), revAST(bl2), ob, id)
+      }else{
+        If(Bop("=", Var(id), Num(1)), revAST(bl1), revAST(bl2), ob, id)
+      }
+
+    case While(b, bl, ob, id) =>
+      if(b.toString.contains("_k")){
+        While(ob, revAST(bl), ob, id)
+      }else {
+        While(Bop(">", Var(id), Num(0)), revAST(bl), ob, id)
+      }
     case _ => stmt
   }
 
@@ -430,10 +443,10 @@ class Parser extends Tokenizer {
    */
   private def stmt2code(stmt: Exp): String = stmt match {
     case Skip => "skip"
-    case If(a, bl1, bl2, if_id) =>
+    case If(a, bl1, bl2, ob, if_id) =>
       val ifId = if_id.tail(2)
       s"if-$ifId ${stmt2code(a)} then {\n${bl1.map(x => stmt2code(x)).mkString(";\n")}\n} else {\n${bl2.map(x => stmt2code(x)).mkString(";\n")}\n}"
-    case While(b, bl, id) =>
+    case While(b, bl, ob, id) =>
       val whileId = id.tail.tail
       s"\nwhile-$whileId ${stmt2code(b)} do {\n${bl.map(x => stmt2code(x)).mkString(";\n")}\n}"
     case Assign(s, a) => s"$s := ${stmt2code(a)}"

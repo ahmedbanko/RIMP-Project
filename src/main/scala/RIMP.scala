@@ -2,7 +2,18 @@ import rimp.Interpreter
 
 import scala.io.Source
 
+/**
+ * The RIMP object is the main entry point of the RIMP Interpreter. It contains the main method which
+ * runs the interpreter's command line interface, and a set of command functions to perform different
+ * operations on the input code.
+ */
 object RIMP {
+  /**
+   * The main method is the entry point of the RIMP interpreter. It prints a welcome message and provides
+   * a command line interface to the user to interact with the interpreter.
+   *
+   * @param args The arguments passed as parameters.
+   */
    def main(args: Array[String]): Unit = {
      val i = new Interpreter()
      println("Welcome to RIMP Interpreter!")
@@ -34,7 +45,12 @@ object RIMP {
        i.resetCounters()
      }
 
-
+     /**
+      * The 'translate' function takes a list of strings as arguments and prints the given code with additional
+      *  variables/counters added to it.
+      *  @param args The list of command arguments, with the file name as the first element.
+      *  @note Prints the error message if file is not provided in the argument list.
+      */
      def translate(args: List[String]): Unit = {
        if (args.isEmpty)
          println("Error: please type a file name e.g. 'EX1'")
@@ -45,6 +61,12 @@ object RIMP {
        }
      }
 
+     /**
+      * The 'invert' function takes a list of strings as arguments and prints the reversed representation of the
+      *  given code.
+      *  @param args The list of command arguments, with the file name as the first element.
+      *  @note Prints the error message if file is not provided in the argument list.
+      */
      def invert(args: List[String]): Unit = {
        if (args.isEmpty)
          println("Error: please type a file name e.g. 'EX1'")
@@ -55,12 +77,23 @@ object RIMP {
        }
      }
 
+     /**
+      * Parses the given arguments and returns the option specified by the user.
+      *
+      * @param args a list of command line arguments
+      * @return the specified option as a string, or an error message if the option is invalid or not specified
+      */
      def getOption(args: List[String]): String = args match {
        case Nil => ""
        case "--steps" :: _ => "steps"
        case _ => "_Error: available options is: '--steps'"
      }
 
+     /**
+      * Evaluates a RIMP program in the forward direction and prints the final values of all variables.
+      *
+      * @param args a list of command line arguments
+      */
      def evaluate(args: List[String]): Unit = {
        if (args.isEmpty)
          println("Error: please type a file name e.g. 'EX1'")
@@ -84,6 +117,11 @@ object RIMP {
        }
      }
 
+     /**
+      * Reverses a RIMP program and evaluates it in the backward direction, printing the final values of all variables.
+      *
+      * @param args a list of command line arguments
+      */
      def reverse(args: List[String]): Unit = {
        if (args.isEmpty)
          println("Error: please type a file name e.g. 'EX1'")
@@ -110,6 +148,9 @@ object RIMP {
        }
      }
 
+     /**
+      * Prints a list o available commands and how to use them.
+      */
      def help(): Unit = {
        println("Type one of the following commands in the format COMMAND <file_name> --OPTION")
        println("'translate' prints the given code with additional variables/counters added to it.")
@@ -120,7 +161,11 @@ object RIMP {
        println("NOTE: the commands 'evaluate' & 'reverse' can run with the option '--steps' which prints the runtime values.")
      }
 
-
+     /**
+      * Reads the contents of the specified RIMP file and returns them as a string.
+      * @param name the name of the file to read
+      * @return the contents of the file as a string, or an error message if the file cannot be read
+      */
      def readFile(name: String): String = {
        val filename = s"$name.rimp"
        try {
